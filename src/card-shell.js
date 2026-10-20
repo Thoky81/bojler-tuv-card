@@ -7,11 +7,15 @@ const ENTITY_KEYS = ['boiler', 'supply', 'coil_in', 'coil_out', 'valve', 'heater
 
 /*RENDER*/
 
+/*GRAPH*/
+
 class BojlerTuvCard extends HTMLElement {
   setConfig(config) {
     this._cfg = { ...DEFAULTS, ...config, uid: 'bt' };
     this._ids = ENTITY_KEYS.map(k => this._cfg[k]).filter(Boolean);
     this._last = null;
+    const gk = graphKey(this._cfg);
+    if (gk !== this._gk) { this._gk = gk; this._hist = null; this._histErr = false; }
     if (this._hass) this._render();
   }
 
@@ -29,17 +33,80 @@ class BojlerTuvCard extends HTMLElement {
     if (!this.shadowRoot) {
       this.attachShadow({ mode: 'open' }).innerHTML = `
         <style>ha-card { padding: 16px; } .msg { color: var(--secondary-text-color); font-size: 14px; }</style>
-        <ha-card><div id="c"></div></ha-card>`;
+        <ha-card><div id="c"></div><div id="g"></div></ha-card>`;
+      const g = this.shadowRoot.getElementById('g');
+      const at = e => {
+        const svg = g.querySelector('#hsvg'), d = this._hist;
+        if (!svg || !d) return null;
+        const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * G.W;
+        return x < G.PL || x > G.PR ? null : d.t0 + (x - G.PL) / (G.PR - G.PL) * (d.t1 - d.t0);
+      };
+      g.addEventListener('pointermove', e => this._hover(at(e)));
+      g.addEventListener('pointerleave', () => this._hover(null));
     }
     const el = this.shadowRoot.getElementById('c');
     if (!this._cfg.boiler || !this._cfg.valve) {
       el.innerHTML = '<div class="msg">Vyber entitu bojlera (teplota) a ventilu v editore karty.</div>';
+      this.shadowRoot.getElementById('g').innerHTML = '';
       return;
     }
     el.innerHTML = renderCard(this._hass.states, this._cfg);
+    this._graphUpdate();
   }
 
-  getCardSize() { return 6; }
+  get _lang() { return this._hass?.locale?.language || this._hass?.language || 'sk'; }
+
+  _graphUpdate() {
+    const g = this.shadowRoot.getElementById('g');
+    if (!this._cfg.show_graph) { g.innerHTML = ''; return; }
+    if (this._hist) { appendLive(this._hist, this._hass, this._cfg); this._scheduleGraph(); return; }
+    if (this._loading || this._histErr) return;
+    const gk = this._gk, msg = t => `<div class="msg" style="padding-top:12px;margin-top:12px;border-top:1px solid var(--divider-color);font-size:12.5px">${t}</div>`;
+    this._loading = true;
+    g.innerHTML = msg('Načítavam históriu…');
+    loadHistory(this._hass, this._cfg).then(d => {
+      if (gk !== this._gk) return;
+      this._hist = d;
+      appendLive(d, this._hass, this._cfg);
+      this._drawGraph();
+    }).catch(err => {
+      if (gk !== this._gk) return;
+      this._histErr = true;
+      g.innerHTML = msg('História nie je dostupná: ' + (err?.message || err));
+    }).finally(() => {
+      this._loading = false;
+      if (gk !== this._gk && this._hass) this._render();
+    });
+  }
+
+  // Perf: live updates only append data; the graph itself is redrawn at most once a minute.
+  _scheduleGraph() {
+    if (this._gTimer) return;
+    const wait = Math.max(0, 60e3 - (Date.now() - (this._gDrawn || 0)));
+    this._gTimer = setTimeout(() => { this._gTimer = null; this._drawGraph(); }, wait);
+  }
+
+  _drawGraph() {
+    if (!this._hist || !this.shadowRoot || !this._cfg.show_graph) return;
+    this.shadowRoot.getElementById('g').innerHTML = renderGraph(this._hist, this._cfg, this._lang);
+    this._gDrawn = Date.now();
+  }
+
+  _hover(T) {
+    const g = this.shadowRoot?.getElementById('g'), cur = g?.querySelector('#hcur'), leg = g?.querySelector('#hleg'), d = this._hist;
+    if (!cur || !leg || !d) return;
+    if (T === null) cur.style.display = 'none';
+    else {
+      const x = G.PL + (T - d.t0) / (d.t1 - d.t0) * (G.PR - G.PL);
+      cur.setAttribute('x1', x); cur.setAttribute('x2', x); cur.style.display = '';
+    }
+    leg.innerHTML = legendHtml(d, this._cfg, T, this._lang);
+  }
+
+  connectedCallback() { if (this._hist) this._drawGraph(); }
+  disconnectedCallback() { clearTimeout(this._gTimer); this._gTimer = null; }
+
+  getCardSize() { return this._cfg?.show_graph ? 10 : 6; }
   getGridOptions() { return { columns: 12, min_columns: 6 }; }
 
   static getConfigElement() { return document.createElement('bojler-tuv-card-editor'); }
@@ -64,6 +131,12 @@ const SCHEMA = [
   { name: 'valve', required: true, selector: { entity: { domain: ['switch', 'valve', 'binary_sensor', 'input_boolean'] } } },
   { name: 'heater_power', selector: { entity: { domain: 'sensor' } } },
   { name: 'heater', selector: { entity: { domain: ['switch', 'binary_sensor', 'input_boolean'] } } },
+  { name: 'history', type: 'expandable', flatten: true, title: 'História', schema: [
+    { name: '', type: 'grid', schema: [
+      { name: 'show_graph', selector: { boolean: {} } },
+      { name: 'graph_hours', selector: { number: { min: 1, max: 168, mode: 'box', unit_of_measurement: 'h' } } },
+    ] },
+  ] },
   { name: 'advanced', type: 'expandable', flatten: true, title: 'Rozšírené', schema: [
     { name: '', type: 'grid', schema: [
       { name: 'cold', selector: { number: { mode: 'box', unit_of_measurement: '°C' } } },
@@ -98,6 +171,8 @@ const LABELS = {
   reverse_tol: 'Tolerancia alarmu',
   heater_on_w: 'Špirála kúri nad',
   animate: 'Animácia toku',
+  show_graph: 'Zobraziť históriu',
+  graph_hours: 'Obdobie',
   show_header: 'Hlavička',
   show_stats: 'Riadok s hodnotami',
   show_banner: 'Stavový pruh',

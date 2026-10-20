@@ -123,7 +123,7 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-const PREVIEW_CFG = {"title": "Bojler", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "label_supply": "PRÍVOD", "label_coil_in": "DO BOJLERA", "label_coil_out": "SPIATOČKA", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "show_header": true, "show_stats": true, "show_banner": true};
+const PREVIEW_CFG = {"title": "Bojler", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "label_supply": "PRÍVOD", "label_coil_in": "DO BOJLERA", "label_coil_out": "SPIATOČKA", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24};
 function renderA(states, C) {
 
 const U = C.uid || 'bt';  // constant: each button-card has its own shadow root

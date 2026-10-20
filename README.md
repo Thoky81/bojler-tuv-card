@@ -16,7 +16,13 @@ It also tells you what is going on:
 | **elektrický ohrev** (orange) | The electric element is on and the heating water is too cold to help |
 | **pohotovosť** (grey) | Nothing is heating |
 
-Click any temperature, the valve or the element to open its history in Home Assistant. The labels are in Slovak, and you can rename the pipe labels in the editor.
+Below the drawing, a history section (last 24 hours by default) shows:
+
+- **Summary:** how long the heating water heated the boiler, how long the electricity did, the electricity used in kWh, and, only if it happened, how long the boiler was heating the radiators.
+- **Boiler vs. supply graph:** green area where the heating water was warmer than the boiler, red where the valve was open although it was colder.
+- **Hourly bars:** minutes per hour heated by the heating water (green) and by electricity (orange).
+
+Move the mouse or a finger over the graph to read the values at that time. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant. The labels are in Slovak, and you can rename the pipe labels in the editor.
 
 ## Install with HACS
 
@@ -59,15 +65,17 @@ heater_power: sensor.bojler_power              # electric element power in W
 | `reverse_tol` | `0.5` | Tolerance (°C) before the "boiler heats radiators" alarm |
 | `animate` | `true` | Moving dashes in the pipes while the valve is open |
 | `show_header` / `show_stats` / `show_banner` | `true` | Show the header, the values row and the status bar |
+| `show_graph` | `true` | Show the history section |
+| `graph_hours` | `24` | Hours of history (1–168) |
 | `label_supply` / `label_coil_in` / `label_coil_out` | `PRÍVOD` / `DO BOJLERA` / `SPIATOČKA` | Pipe labels |
 
 ## Performance
 
-The card redraws only when one of its own entities changes, not on every Home Assistant update. The flow animation is plain CSS, limited to about 7 repaints per second because Safari repaints animated SVG on every frame. Set `animate: false` to turn it off on slow wall tablets.
+The card redraws only when one of its own entities changes, not on every Home Assistant update. The history reads Home Assistant's 5-minute statistics (288 points per sensor per day) instead of the raw sensor history, loads once, then adds new readings from live updates and redraws at most once a minute. The boiler, supply and power sensors need a `state_class` (most temperature and power sensors have one); without it the card falls back to the raw history. The flow animation is plain CSS, limited to about 7 repaints per second because Safari repaints animated SVG on every frame. Set `animate: false` to turn it off on slow wall tablets.
 
 ## Without HACS
 
-[`button-card/bojler-tuv-card.yaml`](button-card/bojler-tuv-card.yaml) is the same card as a [button-card](https://github.com/custom-cards/button-card) template, if you would rather paste YAML than install a card.
+[`button-card/bojler-tuv-card.yaml`](button-card/bojler-tuv-card.yaml) is the same card (without the history section) as a [button-card](https://github.com/custom-cards/button-card) template, if you would rather paste YAML than install a card.
 
 ## Development
 

@@ -39,8 +39,10 @@ CONFIG = {
     "show_header": True,
     "show_stats": True,
     "show_banner": True,
+    "show_graph": True,    # history below the card (HACS card only)
+    "graph_hours": 24,
 }
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 # preview only: extra config for the simulated page
 PREVIEW_EXTRA = {}
 
@@ -103,7 +105,8 @@ def card_js():
     return ((SRC / "card-shell.js").read_text()
             .replace("/*VERSION*/", VERSION)
             .replace("/*DEFAULTS*/", json.dumps(defaults, ensure_ascii=False))
-            .replace("/*RENDER*/", fn))
+            .replace("/*RENDER*/", fn)
+            .replace("/*GRAPH*/", (SRC / "graph.js").read_text()))
 
 
 v = sys.argv[sys.argv.index("--yaml") + 1].upper() if "--yaml" in sys.argv else "A"
