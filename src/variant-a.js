@@ -1,4 +1,19 @@
 // ---------- schematic ----------
+// electric element: the rod glows orange while heating; the icon above the flange shows the switch
+// (power icon: grey = off, green = on, orange = heating) or, without a switch entity, a lightning bolt.
+// Its text sits to the right of the icon, away from the "cold water" label.
+const swOn = elOn === true, swKnown = elOn !== null;
+const ICON_AT = 'translate(327 155)';
+const BOLT = 'M7,2V13H10V22L17,10H13L17,2H7Z';
+const POWER = 'M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13';
+const elIconCol = heating ? WRN : swOn ? SUC : SEC;
+const elIcon = swKnown ? `<path d="${POWER}" transform="${ICON_AT}" style="fill:${elIconCol};fill-opacity:${swOn || heating ? 1 : .55}"/>`
+  : hasHeater ? `<path d="${BOLT}" transform="${ICON_AT}" style="fill:${heating ? WRN : SEC};fill-opacity:${heating ? 1 : .5}"/>` : '';
+let elText = null;  // [text, color, tooltip]
+if (pw !== null && heating) elText = [pwTxt, WRN];
+else if (swKnown) elText = [(swOn ? T.sw_on : T.sw_off) + (lowT === false ? ' · ' + T.vt.toUpperCase() : ''), swOn ? SUC : SEC, lowT === false ? T.vt_long : ''];
+else if (lowT === false) elText = [T.vt.toUpperCase(), SEC, T.vt_long];
+
 const SY = 124, RY = 166, VX = 112, TX = 168, WALL = 214;
 const dim = open ? 1 : 0.4;
 const coil = `M${WALL} ${SY} H292 a7 7 0 0 1 0 14 H240 a7 7 0 0 0 0 14 H292 a7 7 0 0 1 0 14 H${WALL}`;
@@ -37,9 +52,8 @@ const svg = `
     ${heating ? `<path d="M318 192 H246 a5 5 0 0 0 0 10 H318" style="fill:none;stroke:${WRN};stroke-opacity:.25;stroke-width:9;stroke-linecap:round"/>` : ''}
     <path d="M318 192 H246 a5 5 0 0 0 0 10 H318" style="fill:none;stroke:${heating ? WRN : SEC};stroke-opacity:${heating ? 1 : .45};stroke-width:3;stroke-linecap:round"/>
     <rect x="315" y="186" width="9" height="22" rx="2" style="fill:${SEC};fill-opacity:.5"/>
-    ${hasHeater ? `<path d="M7,2V13H10V22L17,10H13L17,2H7Z" transform="translate(326 183) scale(.8)" style="fill:${heating ? WRN : SEC};fill-opacity:${heating ? 1 : .5}"/>` : ''}
-    ${pw !== null && heating ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${WRN}">${pwTxt}</text>`
-      : lowT === false ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${SEC}"><title>${T.vt_long}</title>${T.vt.toUpperCase()}</text>` : ''}
+    ${elIcon}
+    ${elText ? `<text x="350" y="171" style="font-size:9.5px;font-weight:600;fill:${elText[1]}">${elText[2] ? `<title>${elText[2]}</title>` : ''}${elText[0]}</text>` : ''}
   </g>
 
   <!-- heating circuit -->

@@ -26,7 +26,7 @@ CONFIG = {
     "coil_in":  "sensor.bojler_temp_tuv_pipe",         # after the valve, into the boiler coil
     "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2",  # out of the coil, back to heating
     "valve":    "switch.tuv_bojler_valve",             # switch / valve / binary_sensor
-    "heater": "",          # optional: switch/binary_sensor of the electric element
+    "heater": "switch.bojler",  # optional: switch of the electric element (power icon on/off)
     "heater_power": "sensor.bojler_power",  # power sensor (W) of the electric element
     "heater_on_w": 50,     # W above which the element counts as heating
     "tariff": "binary_sensor.d1_mini_v4_switchboard_hdo_tarif_relay",  # optional: low/high tariff (empty = single tariff)
@@ -49,7 +49,7 @@ CONFIG = {
     "graph_smooth": 20,    # minutes of rolling mean for the graph lines (0 = raw)
     "graph_power": False,  # element power as an area in the graph, with kWh per run
 }
-VERSION = "1.6.0"
+VERSION = "1.7.0"
 # the author's own settings for the button-card YAML and the preview (not defaults of the HACS card)
 AUTHOR = {"tariff_low": "off"}  # this HDO relay is on during the high tariff
 # preview only: extra config for the simulated page

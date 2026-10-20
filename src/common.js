@@ -47,7 +47,9 @@ const pwRaw = num(C.heater_power);
 const pw = pwRaw === null ? null : pwRaw * ({ kW: 1e3, MW: 1e6 }[pwUnit] || 1);
 const pwTxt = pwRaw === null ? '' : `${pwUnit === 'W' ? Math.round(pwRaw) : +pwRaw.toFixed(2)} ${pwUnit}`;
 const hasHeater = !!(C.heater || C.heater_power);
-const heating = (C.heater && isOn(C.heater)) || (pw !== null && pw > C.heater_on_w);
+// heating comes from the power reading when there is one; the switch alone only says the element is enabled
+const heating = pw !== null ? pw > C.heater_on_w : !!(C.heater && isOn(C.heater));
+const elOn = C.heater && ok(states[C.heater]) ? isOn(C.heater) : null;  // null = no switch configured
 const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
 // optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
 const tUntil = (() => {
@@ -72,6 +74,7 @@ else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert
 else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
 else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else if (elOn === false) st = { k: 'off', c: SEC, icon: 'mdi:power-off', label: T.sw_off_label, txt: T.sw_off_txt };
 else if (lowT === false) st = { k: 'blocked', c: SEC, icon: 'mdi:power-plug-off', label: T.blocked + untilTxt, txt: T.blocked_txt + untilTxt };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 

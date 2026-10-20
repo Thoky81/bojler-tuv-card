@@ -135,7 +135,8 @@ function legendHtml(d, cfg, T, lang) {
   const item = (label, v, dash, w) => `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap">${sw(dash, w, v)}
     <span style="color:${GSEC}">${label}</span><b style="font-weight:600;color:${gTc(v, cfg)};font-variant-numeric:tabular-nums">${v === null ? '—' : v.toFixed(1) + '°'}</b></span>`;
   const at = T ?? d.t1, L = I18N[cfg.lang || 'sk'];
-  let out = `<span style="color:${GSEC};font-variant-numeric:tabular-nums;white-space:nowrap">${T == null ? L.hist_now : fmtTime(T, lang, cfg.graph_hours > 24, cfg.hour12)}</span>`;
+  // the time shows only while hovering; at rest the values are the current ones
+  let out = T == null ? '' : `<span style="color:${GSEC};font-variant-numeric:tabular-nums;white-space:nowrap">${fmtTime(T, lang, cfg.graph_hours > 24, cfg.hour12)}</span>`;
   out += item(L.boiler, valueAt(d.series.boiler, at), 'none', 2.6);
   if (cfg.supply) out += item(i18nText(cfg, 'supply', 'label_supply').toLowerCase(), valueAt(d.series.supply, at), 'none', 1.6);
   if (cfg.graph_power && d.power) out += `<span style="white-space:nowrap;color:${GSEC}">⚡ <b style="font-weight:600;color:${GWRN};font-variant-numeric:tabular-nums">${fmtPow(valueAt(d.power, at), cfg.power_unit)}</b></span>`;

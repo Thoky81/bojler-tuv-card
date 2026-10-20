@@ -14,6 +14,7 @@ It also tells you what is going on:
 | **boiler heats radiators** (red) | bojler kúri radiátory | bojler topí radiátory | Valve open but the heating water is colder than the boiler, so the boiler is heating your radiators |
 | **heating is warm** (blue) | kúrenie je teplé | topení je teplé | Valve closed although the supply is warmer than the boiler by at least `min_delta` |
 | **electric heating** (orange) | elektrický ohrev | elektrický ohřev | The electric element is on and the heating water is too cold to help |
+| **element off** (grey) | špirála vypnutá | spirála vypnutá | Only with a switch entity (`heater`): the element's switch is off |
 | **peak tariff** (grey) | vysoký tarif | vysoký tarif | Only with a tariff entity: peak tariff, the electric element is switched off by the utility |
 | **standby** (grey) | pohotovosť | pohotovost | Nothing is heating |
 
@@ -30,7 +31,9 @@ Below the drawing, a history section (last 24 hours by default) shows:
 
 **Landscape on wide dashboards.** When the card is wider than 720 px (for example a section spanning two columns), the history moves to the right of the drawing; on narrower cards and phones it stays below. Set `layout` to keep it always below (`stacked`) or always beside (`side`).
 
-Move the mouse or a finger over the graph to read the values at that time. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant.
+**Element switch (optional).** With the element's switch set as `heater`, a power icon ⏻ above the element shows its state: grey with *OFF* when switched off, green with *ON* when on but not drawing power (thermostat satisfied, or peak tariff), orange with the power while heating. Tap it to open the switch.
+
+Move the mouse or a finger over the graph to read the values at that time; at rest the readout shows the current values. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant.
 
 ## Languages
 
@@ -51,6 +54,8 @@ The card speaks **English, Slovak and Czech**, including the card editor. By def
 | Status: heating is warm | heating is warm — The supply is 9.0° warmer than the boiler, the valve could open | kúrenie je teplé — Prívod je o 9.0° teplejší ako bojler, ventil by mohol otvoriť | topení je teplé — Přívod je o 9.0° teplejší než bojler, ventil by mohl otevřít |
 | Status: electric heating | electric heating — Electricity is heating · the heating water is colder than the boiler | elektrický ohrev — Ohrieva elektrina · kúrenie je chladnejšie ako bojler | elektrický ohřev — Ohřívá elektřina · topení je chladnější než bojler |
 | Status: standby | standby — Valve closed · the supply is 5.0° colder than the boiler | pohotovosť — Ventil zatvorený · prívod je o 5.0° chladnejší ako bojler | pohotovost — Ventil zavřený · přívod je o 5.0° chladnější než bojler |
+| Status: element off | element off — The electric element is switched off | špirála vypnutá — Elektrická špirála je vypnutá vypínačom | spirála vypnutá — Elektrická spirála je vypnutá vypínačem |
+| Element switch | ON · OFF | ZAP · VYP | ZAP · VYP |
 | Status: peak tariff | peak tariff until 16:55 — Peak tariff: the electric element is switched off until 16:55 | vysoký tarif do 16:55 — Vysoký tarif: elektrická špirála je vypnutá do 16:55 | vysoký tarif do 16:55 — Vysoký tarif: elektrická spirála je vypnutá do 16:55 |
 | Tariff badge | off-peak · peak until 16:55 (off-peak tariff · peak tariff) | NT · VT do 16:55 (nízky tarif · vysoký tarif) | NT · VT do 16:55 (nízký tarif · vysoký tarif) |
 | Status: unavailable | unavailable — Temperature sensors are unavailable | nedostupné — Teplotné senzory sú nedostupné | nedostupné — Teplotní senzory jsou nedostupné |
@@ -70,7 +75,7 @@ The card speaks **English, Slovak and Czech**, including the card editor. By def
 | `coil_out` | Return (out of the coil) | Spiatočka (z výmenníka) | Zpátečka (z výměníku) |
 | `valve` | Valve | Ventil | Ventil |
 | `heater_power` | Current power of the electric element (W or kW sensor) | Aktuálny príkon špirály (senzor W alebo kW) | Aktuální příkon spirály (senzor W nebo kW) |
-| `heater` | Electric element (on/off) | Elektrická špirála (zap/vyp) | Elektrická spirála (zap/vyp) |
+| `heater` | Electric element switch | Vypínač elektrickej špirály | Vypínač elektrické spirály |
 | `tariff` | Tariff (off-peak / peak) | Tarif (nízky / vysoký) | Tarif (nízký / vysoký) |
 | `tariff_until` | Tariff change (sensor with the time) | Zmena tarifu (senzor s časom) | Změna tarifu (senzor s časem) |
 | *(section)* | History | História | Historie |
@@ -129,7 +134,7 @@ heater_power: sensor.bojler_power              # electric element power in W
 | `coil_out` | — | Temperature coming out of the coil |
 | `valve` | — | Valve entity; `on` / `open` counts as open (required) |
 | `heater_power` | — | Electric element power sensor (W) |
-| `heater` | — | Electric element on/off entity, if you have no power sensor |
+| `heater` | — | Optional switch of the electric element. A ⏻ icon by the element shows it: grey = off, green = on, orange = heating. Without a power sensor, `on` also counts as heating |
 | `heater_on_w` | `50` | Power above which the element counts as heating |
 | `tariff` | — | Optional off-peak/peak entity (binary_sensor, sensor, select, schedule…); empty = single rate |
 | `tariff_low` | `on, nt, low, nízky, nizky, nízký, offpeak, off-peak` | States of `tariff` that mean off-peak (comma-separated, any case). If your HDO relay is **on during the peak tariff**, set `off` |

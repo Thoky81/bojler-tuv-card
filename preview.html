@@ -123,7 +123,7 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-const PREVIEW_CFG = {"title": "", "language": "auto", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "tariff": "binary_sensor.d1_mini_v4_switchboard_hdo_tarif_relay", "tariff_until": "sensor.power_tariff_times", "tariff_low": "off", "label_supply": "", "label_coil_in": "", "label_coil_out": "", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "layout": "auto", "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24, "graph_smooth": 20, "graph_power": false};
+const PREVIEW_CFG = {"title": "", "language": "auto", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "switch.bojler", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "tariff": "binary_sensor.d1_mini_v4_switchboard_hdo_tarif_relay", "tariff_until": "sensor.power_tariff_times", "tariff_low": "off", "label_supply": "", "label_coil_in": "", "label_coil_out": "", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "layout": "auto", "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24, "graph_smooth": 20, "graph_power": false};
 function renderA(states, C) {
 // ---------- translations (language: auto = Home Assistant's language, sk, cs, en) ----------
 const I18N = {
@@ -148,6 +148,7 @@ const I18N = {
     c_rev: 'bojler kúril radiátory', h_heat: 'kúrenie', h_el: 'elektrina', h_valve: 'ventil', h_element: 'špirála',
     loading: 'Načítavam históriu…', hist_err: 'História nie je dostupná: ',
     pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
+    sw_on: 'ZAP', sw_off: 'VYP', sw_off_label: 'špirála vypnutá', sw_off_txt: 'Elektrická špirála je vypnutá vypínačom',
     until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízky tarif', vt_long: 'vysoký tarif',
     blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická špirála je vypnutá',
   },
@@ -172,6 +173,7 @@ const I18N = {
     c_rev: 'bojler topil radiátory', h_heat: 'topení', h_el: 'elektřina', h_valve: 'ventil', h_element: 'spirála',
     loading: 'Načítám historii…', hist_err: 'Historie není dostupná: ',
     pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
+    sw_on: 'ZAP', sw_off: 'VYP', sw_off_label: 'spirála vypnutá', sw_off_txt: 'Elektrická spirála je vypnutá vypínačem',
     until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízký tarif', vt_long: 'vysoký tarif',
     blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická spirála je vypnutá',
   },
@@ -196,6 +198,7 @@ const I18N = {
     c_rev: 'boiler heated radiators', h_heat: 'heating', h_el: 'electricity', h_valve: 'valve', h_element: 'element',
     loading: 'Loading history…', hist_err: 'History is not available: ',
     pick: 'Pick the boiler temperature and the valve in the card editor.',
+    sw_on: 'ON', sw_off: 'OFF', sw_off_label: 'element off', sw_off_txt: 'The electric element is switched off',
     until: 'until', nt: 'off-peak', vt: 'peak', nt_long: 'off-peak tariff', vt_long: 'peak tariff',
     blocked: 'peak tariff', blocked_txt: 'Peak tariff: the electric element is switched off',
   },
@@ -266,7 +269,9 @@ const pwRaw = num(C.heater_power);
 const pw = pwRaw === null ? null : pwRaw * ({ kW: 1e3, MW: 1e6 }[pwUnit] || 1);
 const pwTxt = pwRaw === null ? '' : `${pwUnit === 'W' ? Math.round(pwRaw) : +pwRaw.toFixed(2)} ${pwUnit}`;
 const hasHeater = !!(C.heater || C.heater_power);
-const heating = (C.heater && isOn(C.heater)) || (pw !== null && pw > C.heater_on_w);
+// heating comes from the power reading when there is one; the switch alone only says the element is enabled
+const heating = pw !== null ? pw > C.heater_on_w : !!(C.heater && isOn(C.heater));
+const elOn = C.heater && ok(states[C.heater]) ? isOn(C.heater) : null;  // null = no switch configured
 const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
 // optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
 const tUntil = (() => {
@@ -291,6 +296,7 @@ else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert
 else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
 else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else if (elOn === false) st = { k: 'off', c: SEC, icon: 'mdi:power-off', label: T.sw_off_label, txt: T.sw_off_txt };
 else if (lowT === false) st = { k: 'blocked', c: SEC, icon: 'mdi:power-plug-off', label: T.blocked + untilTxt, txt: T.blocked_txt + untilTxt };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
@@ -342,6 +348,21 @@ const tBadge = (x, y, v, id, label, ly) => `
   </g>`;
 
 // ---------- schematic ----------
+// electric element: the rod glows orange while heating; the icon above the flange shows the switch
+// (power icon: grey = off, green = on, orange = heating) or, without a switch entity, a lightning bolt.
+// Its text sits to the right of the icon, away from the "cold water" label.
+const swOn = elOn === true, swKnown = elOn !== null;
+const ICON_AT = 'translate(327 155)';
+const BOLT = 'M7,2V13H10V22L17,10H13L17,2H7Z';
+const POWER = 'M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13';
+const elIconCol = heating ? WRN : swOn ? SUC : SEC;
+const elIcon = swKnown ? `<path d="${POWER}" transform="${ICON_AT}" style="fill:${elIconCol};fill-opacity:${swOn || heating ? 1 : .55}"/>`
+  : hasHeater ? `<path d="${BOLT}" transform="${ICON_AT}" style="fill:${heating ? WRN : SEC};fill-opacity:${heating ? 1 : .5}"/>` : '';
+let elText = null;  // [text, color, tooltip]
+if (pw !== null && heating) elText = [pwTxt, WRN];
+else if (swKnown) elText = [(swOn ? T.sw_on : T.sw_off) + (lowT === false ? ' · ' + T.vt.toUpperCase() : ''), swOn ? SUC : SEC, lowT === false ? T.vt_long : ''];
+else if (lowT === false) elText = [T.vt.toUpperCase(), SEC, T.vt_long];
+
 const SY = 124, RY = 166, VX = 112, TX = 168, WALL = 214;
 const dim = open ? 1 : 0.4;
 const coil = `M${WALL} ${SY} H292 a7 7 0 0 1 0 14 H240 a7 7 0 0 0 0 14 H292 a7 7 0 0 1 0 14 H${WALL}`;
@@ -380,9 +401,8 @@ const svg = `
     ${heating ? `<path d="M318 192 H246 a5 5 0 0 0 0 10 H318" style="fill:none;stroke:${WRN};stroke-opacity:.25;stroke-width:9;stroke-linecap:round"/>` : ''}
     <path d="M318 192 H246 a5 5 0 0 0 0 10 H318" style="fill:none;stroke:${heating ? WRN : SEC};stroke-opacity:${heating ? 1 : .45};stroke-width:3;stroke-linecap:round"/>
     <rect x="315" y="186" width="9" height="22" rx="2" style="fill:${SEC};fill-opacity:.5"/>
-    ${hasHeater ? `<path d="M7,2V13H10V22L17,10H13L17,2H7Z" transform="translate(326 183) scale(.8)" style="fill:${heating ? WRN : SEC};fill-opacity:${heating ? 1 : .5}"/>` : ''}
-    ${pw !== null && heating ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${WRN}">${pwTxt}</text>`
-      : lowT === false ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${SEC}"><title>${T.vt_long}</title>${T.vt.toUpperCase()}</text>` : ''}
+    ${elIcon}
+    ${elText ? `<text x="350" y="171" style="font-size:9.5px;font-weight:600;fill:${elText[1]}">${elText[2] ? `<title>${elText[2]}</title>` : ''}${elText[0]}</text>` : ''}
   </g>
 
   <!-- heating circuit -->
@@ -456,6 +476,7 @@ const I18N = {
     c_rev: 'bojler kúril radiátory', h_heat: 'kúrenie', h_el: 'elektrina', h_valve: 'ventil', h_element: 'špirála',
     loading: 'Načítavam históriu…', hist_err: 'História nie je dostupná: ',
     pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
+    sw_on: 'ZAP', sw_off: 'VYP', sw_off_label: 'špirála vypnutá', sw_off_txt: 'Elektrická špirála je vypnutá vypínačom',
     until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízky tarif', vt_long: 'vysoký tarif',
     blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická špirála je vypnutá',
   },
@@ -480,6 +501,7 @@ const I18N = {
     c_rev: 'bojler topil radiátory', h_heat: 'topení', h_el: 'elektřina', h_valve: 'ventil', h_element: 'spirála',
     loading: 'Načítám historii…', hist_err: 'Historie není dostupná: ',
     pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
+    sw_on: 'ZAP', sw_off: 'VYP', sw_off_label: 'spirála vypnutá', sw_off_txt: 'Elektrická spirála je vypnutá vypínačem',
     until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízký tarif', vt_long: 'vysoký tarif',
     blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická spirála je vypnutá',
   },
@@ -504,6 +526,7 @@ const I18N = {
     c_rev: 'boiler heated radiators', h_heat: 'heating', h_el: 'electricity', h_valve: 'valve', h_element: 'element',
     loading: 'Loading history…', hist_err: 'History is not available: ',
     pick: 'Pick the boiler temperature and the valve in the card editor.',
+    sw_on: 'ON', sw_off: 'OFF', sw_off_label: 'element off', sw_off_txt: 'The electric element is switched off',
     until: 'until', nt: 'off-peak', vt: 'peak', nt_long: 'off-peak tariff', vt_long: 'peak tariff',
     blocked: 'peak tariff', blocked_txt: 'Peak tariff: the electric element is switched off',
   },
@@ -574,7 +597,9 @@ const pwRaw = num(C.heater_power);
 const pw = pwRaw === null ? null : pwRaw * ({ kW: 1e3, MW: 1e6 }[pwUnit] || 1);
 const pwTxt = pwRaw === null ? '' : `${pwUnit === 'W' ? Math.round(pwRaw) : +pwRaw.toFixed(2)} ${pwUnit}`;
 const hasHeater = !!(C.heater || C.heater_power);
-const heating = (C.heater && isOn(C.heater)) || (pw !== null && pw > C.heater_on_w);
+// heating comes from the power reading when there is one; the switch alone only says the element is enabled
+const heating = pw !== null ? pw > C.heater_on_w : !!(C.heater && isOn(C.heater));
+const elOn = C.heater && ok(states[C.heater]) ? isOn(C.heater) : null;  // null = no switch configured
 const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
 // optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
 const tUntil = (() => {
@@ -599,6 +624,7 @@ else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert
 else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
 else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else if (elOn === false) st = { k: 'off', c: SEC, icon: 'mdi:power-off', label: T.sw_off_label, txt: T.sw_off_txt };
 else if (lowT === false) st = { k: 'blocked', c: SEC, icon: 'mdi:power-plug-off', label: T.blocked + untilTxt, txt: T.blocked_txt + untilTxt };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
@@ -734,6 +760,7 @@ const I18N = {
     c_rev: 'bojler kúril radiátory', h_heat: 'kúrenie', h_el: 'elektrina', h_valve: 'ventil', h_element: 'špirála',
     loading: 'Načítavam históriu…', hist_err: 'História nie je dostupná: ',
     pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
+    sw_on: 'ZAP', sw_off: 'VYP', sw_off_label: 'špirála vypnutá', sw_off_txt: 'Elektrická špirála je vypnutá vypínačom',
     until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízky tarif', vt_long: 'vysoký tarif',
     blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická špirála je vypnutá',
   },
@@ -758,6 +785,7 @@ const I18N = {
     c_rev: 'bojler topil radiátory', h_heat: 'topení', h_el: 'elektřina', h_valve: 'ventil', h_element: 'spirála',
     loading: 'Načítám historii…', hist_err: 'Historie není dostupná: ',
     pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
+    sw_on: 'ZAP', sw_off: 'VYP', sw_off_label: 'spirála vypnutá', sw_off_txt: 'Elektrická spirála je vypnutá vypínačem',
     until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízký tarif', vt_long: 'vysoký tarif',
     blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická spirála je vypnutá',
   },
@@ -782,6 +810,7 @@ const I18N = {
     c_rev: 'boiler heated radiators', h_heat: 'heating', h_el: 'electricity', h_valve: 'valve', h_element: 'element',
     loading: 'Loading history…', hist_err: 'History is not available: ',
     pick: 'Pick the boiler temperature and the valve in the card editor.',
+    sw_on: 'ON', sw_off: 'OFF', sw_off_label: 'element off', sw_off_txt: 'The electric element is switched off',
     until: 'until', nt: 'off-peak', vt: 'peak', nt_long: 'off-peak tariff', vt_long: 'peak tariff',
     blocked: 'peak tariff', blocked_txt: 'Peak tariff: the electric element is switched off',
   },
@@ -852,7 +881,9 @@ const pwRaw = num(C.heater_power);
 const pw = pwRaw === null ? null : pwRaw * ({ kW: 1e3, MW: 1e6 }[pwUnit] || 1);
 const pwTxt = pwRaw === null ? '' : `${pwUnit === 'W' ? Math.round(pwRaw) : +pwRaw.toFixed(2)} ${pwUnit}`;
 const hasHeater = !!(C.heater || C.heater_power);
-const heating = (C.heater && isOn(C.heater)) || (pw !== null && pw > C.heater_on_w);
+// heating comes from the power reading when there is one; the switch alone only says the element is enabled
+const heating = pw !== null ? pw > C.heater_on_w : !!(C.heater && isOn(C.heater));
+const elOn = C.heater && ok(states[C.heater]) ? isOn(C.heater) : null;  // null = no switch configured
 const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
 // optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
 const tUntil = (() => {
@@ -877,6 +908,7 @@ else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert
 else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
 else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else if (elOn === false) st = { k: 'off', c: SEC, icon: 'mdi:power-off', label: T.sw_off_label, txt: T.sw_off_txt };
 else if (lowT === false) st = { k: 'blocked', c: SEC, icon: 'mdi:power-plug-off', label: T.blocked + untilTxt, txt: T.blocked_txt + untilTxt };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
@@ -1029,6 +1061,7 @@ const I18N = {
     c_rev: 'bojler kúril radiátory', h_heat: 'kúrenie', h_el: 'elektrina', h_valve: 'ventil', h_element: 'špirála',
     loading: 'Načítavam históriu…', hist_err: 'História nie je dostupná: ',
     pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
+    sw_on: 'ZAP', sw_off: 'VYP', sw_off_label: 'špirála vypnutá', sw_off_txt: 'Elektrická špirála je vypnutá vypínačom',
     until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízky tarif', vt_long: 'vysoký tarif',
     blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická špirála je vypnutá',
   },
@@ -1053,6 +1086,7 @@ const I18N = {
     c_rev: 'bojler topil radiátory', h_heat: 'topení', h_el: 'elektřina', h_valve: 'ventil', h_element: 'spirála',
     loading: 'Načítám historii…', hist_err: 'Historie není dostupná: ',
     pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
+    sw_on: 'ZAP', sw_off: 'VYP', sw_off_label: 'spirála vypnutá', sw_off_txt: 'Elektrická spirála je vypnutá vypínačem',
     until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízký tarif', vt_long: 'vysoký tarif',
     blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická spirála je vypnutá',
   },
@@ -1077,6 +1111,7 @@ const I18N = {
     c_rev: 'boiler heated radiators', h_heat: 'heating', h_el: 'electricity', h_valve: 'valve', h_element: 'element',
     loading: 'Loading history…', hist_err: 'History is not available: ',
     pick: 'Pick the boiler temperature and the valve in the card editor.',
+    sw_on: 'ON', sw_off: 'OFF', sw_off_label: 'element off', sw_off_txt: 'The electric element is switched off',
     until: 'until', nt: 'off-peak', vt: 'peak', nt_long: 'off-peak tariff', vt_long: 'peak tariff',
     blocked: 'peak tariff', blocked_txt: 'Peak tariff: the electric element is switched off',
   },
@@ -1147,7 +1182,9 @@ const pwRaw = num(C.heater_power);
 const pw = pwRaw === null ? null : pwRaw * ({ kW: 1e3, MW: 1e6 }[pwUnit] || 1);
 const pwTxt = pwRaw === null ? '' : `${pwUnit === 'W' ? Math.round(pwRaw) : +pwRaw.toFixed(2)} ${pwUnit}`;
 const hasHeater = !!(C.heater || C.heater_power);
-const heating = (C.heater && isOn(C.heater)) || (pw !== null && pw > C.heater_on_w);
+// heating comes from the power reading when there is one; the switch alone only says the element is enabled
+const heating = pw !== null ? pw > C.heater_on_w : !!(C.heater && isOn(C.heater));
+const elOn = C.heater && ok(states[C.heater]) ? isOn(C.heater) : null;  // null = no switch configured
 const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
 // optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
 const tUntil = (() => {
@@ -1172,6 +1209,7 @@ else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert
 else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
 else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else if (elOn === false) st = { k: 'off', c: SEC, icon: 'mdi:power-off', label: T.sw_off_label, txt: T.sw_off_txt };
 else if (lowT === false) st = { k: 'blocked', c: SEC, icon: 'mdi:power-plug-off', label: T.blocked + untilTxt, txt: T.blocked_txt + untilTxt };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
