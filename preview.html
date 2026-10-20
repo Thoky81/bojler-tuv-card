@@ -130,10 +130,25 @@ const U = C.uid || 'bt';  // constant: each button-card has its own shadow root
 const ok = s => s && !['unknown','unavailable'].includes(s.state);
 const num = id => { if (!id) return null; const s = states[id]; if (!ok(s)) return null; const v = parseFloat(s.state); return isNaN(v) ? null : v; };
 const isOn = id => { const s = id && states[id]; return !!s && ['on','open','opening'].includes(s.state); };
+const hl = t => {
+  const k = Math.max(0, Math.min(1, (t - C.cold) / (C.hot - C.cold)));
+  return [Math.round(215 - 215 * k), Math.round(50 - 7 * Math.sin(Math.PI * k))];
+};
 const tc = t => {
   if (t === null) return 'var(--disabled-text-color, #9e9e9e)';
-  const k = Math.max(0, Math.min(1, (t - C.cold) / (C.hot - C.cold)));
-  return `hsl(${Math.round(215 - 215 * k)},78%,${Math.round(50 - 7 * Math.sin(Math.PI * k))}%)`;
+  const [h, l] = hl(t);
+  return `hsl(${h},78%,${l}%)`;
+};
+// text on a pill filled with tc(t): white or near-black, whichever has more contrast
+const ink = t => {
+  if (t === null) return '#fff';
+  const [h, l] = hl(t), L = l / 100, a = .78 * Math.min(L, 1 - L);
+  const ch = n => {
+    const k = (n + h / 30) % 12, v = L - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+  };
+  const Y = .2126 * ch(0) + .7152 * ch(8) + .0722 * ch(4);
+  return 1.05 / (Y + .05) >= (Y + .05) / .0625 ? '#fff' : '#1b1b1b';
 };
 const f = v => v === null ? '—' : v.toFixed(1) + '°';
 const sg = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + '°';
@@ -167,7 +182,7 @@ else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: 'elektrický ohrev', txt: `Ohrieva elektrina · kúrenie je ${dSup !== null && dSup < 0 ? 'chladnejšie ako bojler' : 'málo teplé'}` };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: 'pohotovosť', txt: dSup === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${dSup >= 0 ? 'len o ' + dSup.toFixed(1) + '° teplejší' : 'o ' + (-dSup).toFixed(1) + '° chladnejší'} ako bojler` };
 
-const pill = (txt, c) => `<span style="font-size:11px;padding:3px 9px;border-radius:6px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
+const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
 if (!vOk) pills += pill('ventil nedostupný', SEC);
 if (heating && st.k !== 'el') pills += pill('⚡ elektrina', WRN);
@@ -205,16 +220,17 @@ const banner = () => `
     <span style="font-size:12.5px;line-height:1.35;color:${st.k === 'idle' || st.k === 'na' ? SEC : 'var(--primary-text-color)'}">${st.txt}</span>
   </div>`;
 const wrap = inner => `${STYLE}<div style="display:flex;flex-direction:column;gap:12px;text-align:left;color:var(--primary-text-color)">${inner}</div>`;
+// temperature pill on a pipe: filled with the temperature color, label above or below
+const tBadge = (x, y, v, id, label, ly) => `
+  <g ${mi(id)}>
+    <text x="${x}" y="${ly}" text-anchor="middle" style="font-size:9px;letter-spacing:.8px;font-weight:600;fill:${SEC}">${label}</text>
+    <rect x="${x - 29}" y="${y - 12}" width="58" height="24" rx="12" style="fill:${tc(v)};stroke:${CARD_BG};stroke-width:2"/>
+    <text x="${x}" y="${y + 4.8}" text-anchor="middle" style="font-size:13.5px;font-weight:600;fill:${ink(v)};font-variant-numeric:tabular-nums">${f(v)}</text>
+  </g>`;
 
 // ---------- schematic ----------
 const SY = 124, RY = 166, VX = 112, TX = 168, WALL = 214;
 const dim = open ? 1 : 0.4;
-const badge = (x, y, v, col, id, label, ly) => `
-  <g ${mi(id)}>
-    <text x="${x}" y="${ly}" text-anchor="middle" style="font-size:7.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">${label}</text>
-    <rect x="${x - 23}" y="${y - 9.5}" width="46" height="19" rx="9.5" style="fill:${CARD_BG};stroke:${col};stroke-width:1.5"/>
-    <text x="${x}" y="${y + 3.8}" text-anchor="middle" style="font-size:10.5px;font-weight:600;fill:${col};font-variant-numeric:tabular-nums">${f(v)}</text>
-  </g>`;
 const coil = `M${WALL} ${SY} H292 a7 7 0 0 1 0 14 H240 a7 7 0 0 0 0 14 H292 a7 7 0 0 1 0 14 H${WALL}`;
 
 const svg = `
@@ -231,14 +247,14 @@ const svg = `
 
   <!-- hot / cold water -->
   <path d="M266 18 V8 H392" style="fill:none;stroke:${cB};stroke-width:5;stroke-linecap:round;stroke-opacity:.55"/>
-  <text x="392" y="23" text-anchor="end" style="font-size:7.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">TEPLÁ VODA</text>
+  <text x="392" y="24" text-anchor="end" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">TEPLÁ VODA</text>
   <path d="M266 226 V236 H392" style="fill:none;stroke:${tc(12)};stroke-width:5;stroke-linecap:round;stroke-opacity:.45"/>
-  <text x="392" y="228" text-anchor="end" style="font-size:7.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">STUDENÁ</text>
+  <text x="392" y="228" text-anchor="end" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">STUDENÁ</text>
 
   <!-- tank -->
   <g ${mi(C.boiler)}>
     <rect x="${WALL}" y="18" width="104" height="208" rx="40" style="fill:url(#w${U});fill-opacity:.2;stroke:${st.k === 'bad' ? ERR : SEC};stroke-opacity:${st.k === 'bad' ? 1 : .35};stroke-width:3"/>
-    <text x="266" y="62" text-anchor="middle" style="font-size:8px;letter-spacing:1.5px;font-weight:600;fill:${SEC}">BOJLER</text>
+    <text x="266" y="62" text-anchor="middle" style="font-size:9px;letter-spacing:1.5px;font-weight:600;fill:${SEC}">BOJLER</text>
     <text x="266" y="96" text-anchor="middle" style="font-size:30px;font-weight:500;fill:${cB};font-variant-numeric:tabular-nums">${tb === null ? '—' : tb.toFixed(1)}<tspan style="font-size:16px" dy="-11">°C</tspan></text>
   </g>
 
@@ -270,20 +286,20 @@ const svg = `
     <rect x="${VX - 9}" y="94" width="18" height="12" rx="2.5" style="fill:${vCol};fill-opacity:${open ? 1 : .55}"/>
     <rect x="${VX - 1}" y="106" width="2" height="9" style="fill:${vCol}"/>
     <path d="M${VX - 12} 114 L${VX} ${SY} L${VX - 12} 134 Z M${VX + 12} 114 L${VX} ${SY} L${VX + 12} 134 Z" style="fill:${vCol};fill-opacity:${open ? 1 : .55};stroke:${CARD_BG};stroke-width:1.5;stroke-linejoin:round"/>
-    <text x="${VX}" y="150" text-anchor="middle" style="font-size:7.5px;letter-spacing:1px;font-weight:600;fill:${vCol}">${!vOk ? 'VENTIL ?' : open ? 'OTVORENÝ' : 'ZATVORENÝ'}</text>
+    <text x="${VX}" y="151" text-anchor="middle" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${vCol}">${!vOk ? 'VENTIL ?' : open ? 'OTVORENÝ' : 'ZATVORENÝ'}</text>
   </g>
 
-  ${badge(52, SY, t1, c1, C.supply, C.label_supply, 108)}
-  ${badge(TX, SY, t2, c2, C.coil_in, C.label_coil_in, 108)}
-  ${badge(TX, RY, t3, c3, C.coil_out, C.label_coil_out, 189)}
-  <text x="${TX}" y="148" text-anchor="middle" style="font-size:9px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums">Δ ${sg(dCoil)}</text>
+  ${tBadge(52, SY, t1, C.supply, C.label_supply, 105)}
+  ${tBadge(TX, SY, t2, C.coil_in, C.label_coil_in, 105)}
+  ${tBadge(TX, RY, t3, C.coil_out, C.label_coil_out, 193)}
+  <text x="${TX}" y="149" text-anchor="middle" style="font-size:10px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums">Δ ${sg(dCoil)}</text>
 </svg>`;
 
 // ---------- stats ----------
 const cell = (label, val, col, id) => `
   <div ${mi(id)} style="min-width:0">
-    <div style="font-size:10px;color:${SEC};white-space:nowrap">${label}</div>
-    <div style="font-size:14px;font-weight:500;color:${col};white-space:nowrap;font-variant-numeric:tabular-nums">${val}</div>
+    <div style="font-size:11px;color:${SEC};white-space:nowrap">${label}</div>
+    <div style="font-size:15px;font-weight:500;color:${col};white-space:nowrap;font-variant-numeric:tabular-nums">${val}</div>
   </div>`;
 let cells = cell('bojler', f(tb), cB, C.boiler)
   + cell('prívod − bojler', sg(dSup), supCol, C.supply)
@@ -305,10 +321,25 @@ const U = C.uid || 'bt';  // constant: each button-card has its own shadow root
 const ok = s => s && !['unknown','unavailable'].includes(s.state);
 const num = id => { if (!id) return null; const s = states[id]; if (!ok(s)) return null; const v = parseFloat(s.state); return isNaN(v) ? null : v; };
 const isOn = id => { const s = id && states[id]; return !!s && ['on','open','opening'].includes(s.state); };
+const hl = t => {
+  const k = Math.max(0, Math.min(1, (t - C.cold) / (C.hot - C.cold)));
+  return [Math.round(215 - 215 * k), Math.round(50 - 7 * Math.sin(Math.PI * k))];
+};
 const tc = t => {
   if (t === null) return 'var(--disabled-text-color, #9e9e9e)';
-  const k = Math.max(0, Math.min(1, (t - C.cold) / (C.hot - C.cold)));
-  return `hsl(${Math.round(215 - 215 * k)},78%,${Math.round(50 - 7 * Math.sin(Math.PI * k))}%)`;
+  const [h, l] = hl(t);
+  return `hsl(${h},78%,${l}%)`;
+};
+// text on a pill filled with tc(t): white or near-black, whichever has more contrast
+const ink = t => {
+  if (t === null) return '#fff';
+  const [h, l] = hl(t), L = l / 100, a = .78 * Math.min(L, 1 - L);
+  const ch = n => {
+    const k = (n + h / 30) % 12, v = L - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+  };
+  const Y = .2126 * ch(0) + .7152 * ch(8) + .0722 * ch(4);
+  return 1.05 / (Y + .05) >= (Y + .05) / .0625 ? '#fff' : '#1b1b1b';
 };
 const f = v => v === null ? '—' : v.toFixed(1) + '°';
 const sg = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + '°';
@@ -342,7 +373,7 @@ else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: 'elektrický ohrev', txt: `Ohrieva elektrina · kúrenie je ${dSup !== null && dSup < 0 ? 'chladnejšie ako bojler' : 'málo teplé'}` };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: 'pohotovosť', txt: dSup === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${dSup >= 0 ? 'len o ' + dSup.toFixed(1) + '° teplejší' : 'o ' + (-dSup).toFixed(1) + '° chladnejší'} ako bojler` };
 
-const pill = (txt, c) => `<span style="font-size:11px;padding:3px 9px;border-radius:6px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
+const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
 if (!vOk) pills += pill('ventil nedostupný', SEC);
 if (heating && st.k !== 'el') pills += pill('⚡ elektrina', WRN);
@@ -380,6 +411,13 @@ const banner = () => `
     <span style="font-size:12.5px;line-height:1.35;color:${st.k === 'idle' || st.k === 'na' ? SEC : 'var(--primary-text-color)'}">${st.txt}</span>
   </div>`;
 const wrap = inner => `${STYLE}<div style="display:flex;flex-direction:column;gap:12px;text-align:left;color:var(--primary-text-color)">${inner}</div>`;
+// temperature pill on a pipe: filled with the temperature color, label above or below
+const tBadge = (x, y, v, id, label, ly) => `
+  <g ${mi(id)}>
+    <text x="${x}" y="${ly}" text-anchor="middle" style="font-size:9px;letter-spacing:.8px;font-weight:600;fill:${SEC}">${label}</text>
+    <rect x="${x - 29}" y="${y - 12}" width="58" height="24" rx="12" style="fill:${tc(v)};stroke:${CARD_BG};stroke-width:2"/>
+    <text x="${x}" y="${y + 4.8}" text-anchor="middle" style="font-size:13.5px;font-weight:600;fill:${ink(v)};font-variant-numeric:tabular-nums">${f(v)}</text>
+  </g>`;
 
 // ---------- B: temperature bars, dashed line = boiler ----------
 const p0 = tb === null ? null : pct(tb);
@@ -448,10 +486,25 @@ const U = C.uid || 'bt';  // constant: each button-card has its own shadow root
 const ok = s => s && !['unknown','unavailable'].includes(s.state);
 const num = id => { if (!id) return null; const s = states[id]; if (!ok(s)) return null; const v = parseFloat(s.state); return isNaN(v) ? null : v; };
 const isOn = id => { const s = id && states[id]; return !!s && ['on','open','opening'].includes(s.state); };
+const hl = t => {
+  const k = Math.max(0, Math.min(1, (t - C.cold) / (C.hot - C.cold)));
+  return [Math.round(215 - 215 * k), Math.round(50 - 7 * Math.sin(Math.PI * k))];
+};
 const tc = t => {
   if (t === null) return 'var(--disabled-text-color, #9e9e9e)';
-  const k = Math.max(0, Math.min(1, (t - C.cold) / (C.hot - C.cold)));
-  return `hsl(${Math.round(215 - 215 * k)},78%,${Math.round(50 - 7 * Math.sin(Math.PI * k))}%)`;
+  const [h, l] = hl(t);
+  return `hsl(${h},78%,${l}%)`;
+};
+// text on a pill filled with tc(t): white or near-black, whichever has more contrast
+const ink = t => {
+  if (t === null) return '#fff';
+  const [h, l] = hl(t), L = l / 100, a = .78 * Math.min(L, 1 - L);
+  const ch = n => {
+    const k = (n + h / 30) % 12, v = L - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+  };
+  const Y = .2126 * ch(0) + .7152 * ch(8) + .0722 * ch(4);
+  return 1.05 / (Y + .05) >= (Y + .05) / .0625 ? '#fff' : '#1b1b1b';
 };
 const f = v => v === null ? '—' : v.toFixed(1) + '°';
 const sg = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + '°';
@@ -485,7 +538,7 @@ else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: 'elektrický ohrev', txt: `Ohrieva elektrina · kúrenie je ${dSup !== null && dSup < 0 ? 'chladnejšie ako bojler' : 'málo teplé'}` };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: 'pohotovosť', txt: dSup === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${dSup >= 0 ? 'len o ' + dSup.toFixed(1) + '° teplejší' : 'o ' + (-dSup).toFixed(1) + '° chladnejší'} ako bojler` };
 
-const pill = (txt, c) => `<span style="font-size:11px;padding:3px 9px;border-radius:6px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
+const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
 if (!vOk) pills += pill('ventil nedostupný', SEC);
 if (heating && st.k !== 'el') pills += pill('⚡ elektrina', WRN);
@@ -523,6 +576,13 @@ const banner = () => `
     <span style="font-size:12.5px;line-height:1.35;color:${st.k === 'idle' || st.k === 'na' ? SEC : 'var(--primary-text-color)'}">${st.txt}</span>
   </div>`;
 const wrap = inner => `${STYLE}<div style="display:flex;flex-direction:column;gap:12px;text-align:left;color:var(--primary-text-color)">${inner}</div>`;
+// temperature pill on a pipe: filled with the temperature color, label above or below
+const tBadge = (x, y, v, id, label, ly) => `
+  <g ${mi(id)}>
+    <text x="${x}" y="${ly}" text-anchor="middle" style="font-size:9px;letter-spacing:.8px;font-weight:600;fill:${SEC}">${label}</text>
+    <rect x="${x - 29}" y="${y - 12}" width="58" height="24" rx="12" style="fill:${tc(v)};stroke:${CARD_BG};stroke-width:2"/>
+    <text x="${x}" y="${y + 4.8}" text-anchor="middle" style="font-size:13.5px;font-weight:600;fill:${ink(v)};font-variant-numeric:tabular-nums">${f(v)}</text>
+  </g>`;
 
 // ---------- C: boiler gauge + one color-graded pipe ----------
 const GX = 110, GY = 112, GR = 88, N = 48;
@@ -552,14 +612,8 @@ const gauge = `
 </svg>`;
 
 // pipe: supply -> valve -> coil in -> [boiler coil] -> coil out
-const PY = 46, X0 = 10, X1 = 350, P1 = 44, PV = 116, P2 = 186, B0 = 228, B1 = 296, P3 = 328;
+const PY = 46, X0 = 10, X1 = 350, P1 = 40, PV = 108, P2 = 172, B0 = 214, B1 = 278, P3 = 324;
 const off = x => ((x - X0) / (X1 - X0)).toFixed(3);
-const pBadge = (x, v, col, id, label) => `
-  <g ${mi(id)}>
-    <text x="${x}" y="${PY - 18}" text-anchor="middle" style="font-size:7.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">${label}</text>
-    <rect x="${x - 23}" y="${PY - 9.5}" width="46" height="19" rx="9.5" style="fill:${CARD_BG};stroke:${col};stroke-width:1.5"/>
-    <text x="${x}" y="${PY + 3.8}" text-anchor="middle" style="font-size:10.5px;font-weight:600;fill:${col};font-variant-numeric:tabular-nums">${f(v)}</text>
-  </g>`;
 const zig = `M${B0} ${PY} l4 -10 l8 20 l8 -20 l8 20 l8 -20 l8 20 l8 -20 l8 20 l4 -10`;
 const pipe = `
 <svg viewBox="0 0 360 86" style="width:100%;height:auto;display:block;overflow:visible">
@@ -579,9 +633,9 @@ const pipe = `
     <path d="M${PV - 12} ${PY - 10} L${PV} ${PY} L${PV - 12} ${PY + 10} Z M${PV + 12} ${PY - 10} L${PV} ${PY} L${PV + 12} ${PY + 10} Z" style="fill:${vCol};fill-opacity:${open ? 1 : .55};stroke:${CARD_BG};stroke-width:1.5;stroke-linejoin:round"/>
     <text x="${PV}" y="${PY + 26}" text-anchor="middle" style="font-size:7.5px;letter-spacing:1px;font-weight:600;fill:${vCol}">${vTxt.toUpperCase()}</text>
   </g>
-  ${pBadge(P1, t1, c1, C.supply, C.label_supply)}
-  ${pBadge(P2, t2, c2, C.coil_in, C.label_coil_in)}
-  ${pBadge(P3, t3, c3, C.coil_out, C.label_coil_out)}
+  ${tBadge(P1, PY, t1, C.supply, C.label_supply, PY - 18)}
+  ${tBadge(P2, PY, t2, C.coil_in, C.label_coil_in, PY - 18)}
+  ${tBadge(P3, PY, t3, C.coil_out, C.label_coil_out, PY - 18)}
   <text x="${(B0 + B1) / 2}" y="${PY + 38}" text-anchor="middle" style="font-size:9px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums">Δ ${sg(dCoil)}</text>
   <text x="${X0}" y="${PY + 38}" style="font-size:7.5px;fill:${SEC}">z kúrenia →</text>
   <text x="${X1}" y="${PY + 38}" text-anchor="end" style="font-size:7.5px;fill:${SEC}">→ do kúrenia</text>
@@ -614,10 +668,25 @@ const U = C.uid || 'bt';  // constant: each button-card has its own shadow root
 const ok = s => s && !['unknown','unavailable'].includes(s.state);
 const num = id => { if (!id) return null; const s = states[id]; if (!ok(s)) return null; const v = parseFloat(s.state); return isNaN(v) ? null : v; };
 const isOn = id => { const s = id && states[id]; return !!s && ['on','open','opening'].includes(s.state); };
+const hl = t => {
+  const k = Math.max(0, Math.min(1, (t - C.cold) / (C.hot - C.cold)));
+  return [Math.round(215 - 215 * k), Math.round(50 - 7 * Math.sin(Math.PI * k))];
+};
 const tc = t => {
   if (t === null) return 'var(--disabled-text-color, #9e9e9e)';
-  const k = Math.max(0, Math.min(1, (t - C.cold) / (C.hot - C.cold)));
-  return `hsl(${Math.round(215 - 215 * k)},78%,${Math.round(50 - 7 * Math.sin(Math.PI * k))}%)`;
+  const [h, l] = hl(t);
+  return `hsl(${h},78%,${l}%)`;
+};
+// text on a pill filled with tc(t): white or near-black, whichever has more contrast
+const ink = t => {
+  if (t === null) return '#fff';
+  const [h, l] = hl(t), L = l / 100, a = .78 * Math.min(L, 1 - L);
+  const ch = n => {
+    const k = (n + h / 30) % 12, v = L - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+  };
+  const Y = .2126 * ch(0) + .7152 * ch(8) + .0722 * ch(4);
+  return 1.05 / (Y + .05) >= (Y + .05) / .0625 ? '#fff' : '#1b1b1b';
 };
 const f = v => v === null ? '—' : v.toFixed(1) + '°';
 const sg = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + '°';
@@ -651,7 +720,7 @@ else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: 'elektrický ohrev', txt: `Ohrieva elektrina · kúrenie je ${dSup !== null && dSup < 0 ? 'chladnejšie ako bojler' : 'málo teplé'}` };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: 'pohotovosť', txt: dSup === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${dSup >= 0 ? 'len o ' + dSup.toFixed(1) + '° teplejší' : 'o ' + (-dSup).toFixed(1) + '° chladnejší'} ako bojler` };
 
-const pill = (txt, c) => `<span style="font-size:11px;padding:3px 9px;border-radius:6px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
+const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
 if (!vOk) pills += pill('ventil nedostupný', SEC);
 if (heating && st.k !== 'el') pills += pill('⚡ elektrina', WRN);
@@ -689,6 +758,13 @@ const banner = () => `
     <span style="font-size:12.5px;line-height:1.35;color:${st.k === 'idle' || st.k === 'na' ? SEC : 'var(--primary-text-color)'}">${st.txt}</span>
   </div>`;
 const wrap = inner => `${STYLE}<div style="display:flex;flex-direction:column;gap:12px;text-align:left;color:var(--primary-text-color)">${inner}</div>`;
+// temperature pill on a pipe: filled with the temperature color, label above or below
+const tBadge = (x, y, v, id, label, ly) => `
+  <g ${mi(id)}>
+    <text x="${x}" y="${ly}" text-anchor="middle" style="font-size:9px;letter-spacing:.8px;font-weight:600;fill:${SEC}">${label}</text>
+    <rect x="${x - 29}" y="${y - 12}" width="58" height="24" rx="12" style="fill:${tc(v)};stroke:${CARD_BG};stroke-width:2"/>
+    <text x="${x}" y="${y + 4.8}" text-anchor="middle" style="font-size:13.5px;font-weight:600;fill:${ink(v)};font-variant-numeric:tabular-nums">${f(v)}</text>
+  </g>`;
 
 // ---------- D: compact tile ----------
 const seg = (v, w) => `<div style="flex:${w};height:8px;background:${tc(v)};opacity:${v === null ? .25 : 1}"></div>`;

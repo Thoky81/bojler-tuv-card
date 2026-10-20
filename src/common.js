@@ -3,10 +3,25 @@ const U = C.uid || 'bt';  // constant: each button-card has its own shadow root
 const ok = s => s && !['unknown','unavailable'].includes(s.state);
 const num = id => { if (!id) return null; const s = states[id]; if (!ok(s)) return null; const v = parseFloat(s.state); return isNaN(v) ? null : v; };
 const isOn = id => { const s = id && states[id]; return !!s && ['on','open','opening'].includes(s.state); };
+const hl = t => {
+  const k = Math.max(0, Math.min(1, (t - C.cold) / (C.hot - C.cold)));
+  return [Math.round(215 - 215 * k), Math.round(50 - 7 * Math.sin(Math.PI * k))];
+};
 const tc = t => {
   if (t === null) return 'var(--disabled-text-color, #9e9e9e)';
-  const k = Math.max(0, Math.min(1, (t - C.cold) / (C.hot - C.cold)));
-  return `hsl(${Math.round(215 - 215 * k)},78%,${Math.round(50 - 7 * Math.sin(Math.PI * k))}%)`;
+  const [h, l] = hl(t);
+  return `hsl(${h},78%,${l}%)`;
+};
+// text on a pill filled with tc(t): white or near-black, whichever has more contrast
+const ink = t => {
+  if (t === null) return '#fff';
+  const [h, l] = hl(t), L = l / 100, a = .78 * Math.min(L, 1 - L);
+  const ch = n => {
+    const k = (n + h / 30) % 12, v = L - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+  };
+  const Y = .2126 * ch(0) + .7152 * ch(8) + .0722 * ch(4);
+  return 1.05 / (Y + .05) >= (Y + .05) / .0625 ? '#fff' : '#1b1b1b';
 };
 const f = v => v === null ? '—' : v.toFixed(1) + '°';
 const sg = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + '°';
@@ -40,7 +55,7 @@ else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: 'elektrický ohrev', txt: `Ohrieva elektrina · kúrenie je ${dSup !== null && dSup < 0 ? 'chladnejšie ako bojler' : 'málo teplé'}` };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: 'pohotovosť', txt: dSup === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${dSup >= 0 ? 'len o ' + dSup.toFixed(1) + '° teplejší' : 'o ' + (-dSup).toFixed(1) + '° chladnejší'} ako bojler` };
 
-const pill = (txt, c) => `<span style="font-size:11px;padding:3px 9px;border-radius:6px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
+const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
 if (!vOk) pills += pill('ventil nedostupný', SEC);
 if (heating && st.k !== 'el') pills += pill('⚡ elektrina', WRN);
@@ -78,3 +93,10 @@ const banner = () => `
     <span style="font-size:12.5px;line-height:1.35;color:${st.k === 'idle' || st.k === 'na' ? SEC : 'var(--primary-text-color)'}">${st.txt}</span>
   </div>`;
 const wrap = inner => `${STYLE}<div style="display:flex;flex-direction:column;gap:12px;text-align:left;color:var(--primary-text-color)">${inner}</div>`;
+// temperature pill on a pipe: filled with the temperature color, label above or below
+const tBadge = (x, y, v, id, label, ly) => `
+  <g ${mi(id)}>
+    <text x="${x}" y="${ly}" text-anchor="middle" style="font-size:9px;letter-spacing:.8px;font-weight:600;fill:${SEC}">${label}</text>
+    <rect x="${x - 29}" y="${y - 12}" width="58" height="24" rx="12" style="fill:${tc(v)};stroke:${CARD_BG};stroke-width:2"/>
+    <text x="${x}" y="${y + 4.8}" text-anchor="middle" style="font-size:13.5px;font-weight:600;fill:${ink(v)};font-variant-numeric:tabular-nums">${f(v)}</text>
+  </g>`;

@@ -26,14 +26,8 @@ const gauge = `
 </svg>`;
 
 // pipe: supply -> valve -> coil in -> [boiler coil] -> coil out
-const PY = 46, X0 = 10, X1 = 350, P1 = 44, PV = 116, P2 = 186, B0 = 228, B1 = 296, P3 = 328;
+const PY = 46, X0 = 10, X1 = 350, P1 = 40, PV = 108, P2 = 172, B0 = 214, B1 = 278, P3 = 324;
 const off = x => ((x - X0) / (X1 - X0)).toFixed(3);
-const pBadge = (x, v, col, id, label) => `
-  <g ${mi(id)}>
-    <text x="${x}" y="${PY - 18}" text-anchor="middle" style="font-size:7.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">${label}</text>
-    <rect x="${x - 23}" y="${PY - 9.5}" width="46" height="19" rx="9.5" style="fill:${CARD_BG};stroke:${col};stroke-width:1.5"/>
-    <text x="${x}" y="${PY + 3.8}" text-anchor="middle" style="font-size:10.5px;font-weight:600;fill:${col};font-variant-numeric:tabular-nums">${f(v)}</text>
-  </g>`;
 const zig = `M${B0} ${PY} l4 -10 l8 20 l8 -20 l8 20 l8 -20 l8 20 l8 -20 l8 20 l4 -10`;
 const pipe = `
 <svg viewBox="0 0 360 86" style="width:100%;height:auto;display:block;overflow:visible">
@@ -53,9 +47,9 @@ const pipe = `
     <path d="M${PV - 12} ${PY - 10} L${PV} ${PY} L${PV - 12} ${PY + 10} Z M${PV + 12} ${PY - 10} L${PV} ${PY} L${PV + 12} ${PY + 10} Z" style="fill:${vCol};fill-opacity:${open ? 1 : .55};stroke:${CARD_BG};stroke-width:1.5;stroke-linejoin:round"/>
     <text x="${PV}" y="${PY + 26}" text-anchor="middle" style="font-size:7.5px;letter-spacing:1px;font-weight:600;fill:${vCol}">${vTxt.toUpperCase()}</text>
   </g>
-  ${pBadge(P1, t1, c1, C.supply, C.label_supply)}
-  ${pBadge(P2, t2, c2, C.coil_in, C.label_coil_in)}
-  ${pBadge(P3, t3, c3, C.coil_out, C.label_coil_out)}
+  ${tBadge(P1, PY, t1, C.supply, C.label_supply, PY - 18)}
+  ${tBadge(P2, PY, t2, C.coil_in, C.label_coil_in, PY - 18)}
+  ${tBadge(P3, PY, t3, C.coil_out, C.label_coil_out, PY - 18)}
   <text x="${(B0 + B1) / 2}" y="${PY + 38}" text-anchor="middle" style="font-size:9px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums">Δ ${sg(dCoil)}</text>
   <text x="${X0}" y="${PY + 38}" style="font-size:7.5px;fill:${SEC}">z kúrenia →</text>
   <text x="${X1}" y="${PY + 38}" text-anchor="end" style="font-size:7.5px;fill:${SEC}">→ do kúrenia</text>
