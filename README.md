@@ -76,6 +76,16 @@ heater_power: sensor.bojler_power              # electric element power in W
 
 The card redraws only when one of its own entities changes, not on every Home Assistant update. The history reads Home Assistant's 5-minute statistics (288 points per sensor per day) instead of the raw sensor history, loads once, then adds new readings from live updates and redraws at most once a minute. The boiler, supply and power sensors need a `state_class` (most temperature and power sensors have one); without it the card falls back to the raw history. The flow animation is plain CSS, limited to about 7 repaints per second because Safari repaints animated SVG on every frame. Set `animate: false` to turn it off on slow wall tablets.
 
+## Valve automation (blueprint)
+
+The card shows when the boiler heats the radiators; this blueprint keeps it from happening. It opens the valve when the heating water is at least 3 °C warmer than the boiler, closes it when it is less than 1 °C warmer, waits 2 minutes before each move so a cycling heat source doesn't flap the valve, sets the valve correctly after a restart, and closes it if a sensor becomes unavailable. All values can be changed when you create the automation.
+
+[![Open your Home Assistant instance and show the blueprint import dialog.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FThoky81%2Fbojler-tuv-card%2Fblob%2Fmain%2Fblueprints%2Fbojler-ohrev-z-kurenia.yaml)
+
+Or: Settings → Automations & scenes → Blueprints → **Import blueprint**, and paste `https://github.com/Thoky81/bojler-tuv-card/blob/main/blueprints/bojler-ohrev-z-kurenia.yaml`. Then create an automation from it and pick your supply sensor (in front of the valve), boiler sensor and valve switch. Disable any older automation that switches the same valve.
+
+The default "Open above" of 3 °C matches the card's `min_delta`, so the card's blue "kúrenie je teplé" status and the automation agree.
+
 ## Without HACS
 
 [`button-card/bojler-tuv-card.yaml`](button-card/bojler-tuv-card.yaml) is the same card (without the history section) as a [button-card](https://github.com/custom-cards/button-card) template, if you would rather paste YAML than install a card.

@@ -1,0 +1,89 @@
+blueprint:
+  name: Bojler – ohrev z kúrenia
+  description: >
+    Opens the boiler valve when the heating water is warmer than the boiler by at least
+    "Open above", and closes it when it is warmer by less than "Close below", so the
+    boiler never heats the radiators. Both conditions must last for "Delay", which keeps
+    a cycling heat source from flapping the valve. After a Home Assistant restart the
+    valve is set to the right state. If a sensor becomes unavailable, the valve closes.
+    Made for the Bojler TUV Card: https://github.com/Thoky81/bojler-tuv-card
+  domain: automation
+  source_url: https://github.com/Thoky81/bojler-tuv-card/blob/main/blueprints/bojler-ohrev-z-kurenia.yaml
+  input:
+    supply:
+      name: Heating supply temperature
+      description: Pipe sensor in front of the valve, on the heating side.
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    boiler:
+      name: Boiler temperature
+      description: Water temperature in the boiler tank.
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    valve:
+      name: Valve
+      description: Switch that opens the valve to the boiler coil.
+      selector:
+        entity:
+          domain:
+            - switch
+            - input_boolean
+    open_delta:
+      name: Open above
+      description: Open when the supply is warmer than the boiler by more than this.
+      default: 3
+      selector:
+        number: { min: 0.5, max: 15, step: 0.5, unit_of_measurement: °C, mode: box }
+    close_delta:
+      name: Close below
+      description: Close when the supply is warmer than the boiler by less than this. Keep it below "Open above".
+      default: 1
+      selector:
+        number: { min: -5, max: 10, step: 0.5, unit_of_measurement: °C, mode: box }
+    delay:
+      name: Delay
+      description: How long a condition must last before the valve moves.
+      default: { minutes: 2 }
+      selector:
+        duration: {}
+
+trigger_variables:
+  supply: !input supply
+  boiler: !input boiler
+  open_delta: !input open_delta
+  close_delta: !input close_delta
+
+triggers:
+  - trigger: template
+    value_template: "{{ states(supply) | float(0) > states(boiler) | float(100) + open_delta }}"
+    for: !input delay
+    id: open
+  - trigger: template
+    value_template: "{{ states(supply) | float(0) < states(boiler) | float(100) + close_delta }}"
+    for: !input delay
+    id: close
+  - trigger: homeassistant
+    event: start
+    id: start
+
+variables:
+  valve: !input valve
+  s: "{{ states(supply) | float(0) }}"
+  b: "{{ states(boiler) | float(100) }}"
+
+conditions: []
+actions:
+  - choose:
+      - conditions: "{{ trigger.id == 'open' or (trigger.id == 'start' and s > b + open_delta) }}"
+        sequence:
+          - action: homeassistant.turn_on
+            target: { entity_id: "{{ valve }}" }
+      - conditions: "{{ trigger.id == 'close' or (trigger.id == 'start' and s < b + close_delta) }}"
+        sequence:
+          - action: homeassistant.turn_off
+            target: { entity_id: "{{ valve }}" }
+mode: queued
