@@ -15,7 +15,7 @@ It also tells you what is going on:
 | **heating is warm** (blue) | kúrenie je teplé | topení je teplé | Valve closed although the supply is warmer than the boiler by at least `min_delta` |
 | **electric heating** (orange) | elektrický ohrev | elektrický ohřev | The electric element is on and the heating water is too cold to help |
 | **element off** (grey) | špirála vypnutá | spirála vypnutá | Only with a switch entity (`heater`): the element's switch is off |
-| **peak tariff** (grey) | vysoký tarif | vysoký tarif | Only with a tariff entity: peak tariff, the electric element is switched off by the utility |
+| **peak tariff** (grey) | vysoký tarif | vysoký tarif | Only with a tariff entity: peak tariff, the utility cuts power to the element (your own switch can still be on) |
 | **standby** (grey) | pohotovosť | pohotovost | Nothing is heating |
 
 The values row under the drawing shows **supply − boiler** (positive means the heating water is warmer and worth using) and **coil Δ** (into the coil minus out of it: how much the water cooled in the boiler, shown only while the valve is open). Hover a value to see the calculation.
@@ -56,7 +56,7 @@ The card speaks **English, Slovak and Czech**, including the card editor. By def
 | Status: standby | standby — Valve closed · the supply is 5.0° colder than the boiler | pohotovosť — Ventil zatvorený · prívod je o 5.0° chladnejší ako bojler | pohotovost — Ventil zavřený · přívod je o 5.0° chladnější než bojler |
 | Status: element off | element off — The electric element is switched off | špirála vypnutá — Elektrická špirála je vypnutá vypínačom | spirála vypnutá — Elektrická spirála je vypnutá vypínačem |
 | Element switch | ON · OFF | ZAP · VYP | ZAP · VYP |
-| Status: peak tariff | peak tariff until 16:55 — Peak tariff: the electric element is switched off until 16:55 | vysoký tarif do 16:55 — Vysoký tarif: elektrická špirála je vypnutá do 16:55 | vysoký tarif do 16:55 — Vysoký tarif: elektrická spirála je vypnutá do 16:55 |
+| Status: peak tariff | peak tariff until 16:55 — Peak tariff: the element gets no power until 16:55 | vysoký tarif do 16:55 — Vysoký tarif: špirála je bez prúdu do 16:55 | vysoký tarif do 16:55 — Vysoký tarif: spirála je bez proudu do 16:55 |
 | Tariff badge | off-peak · peak until 16:55 (off-peak tariff · peak tariff) | NT · VT do 16:55 (nízky tarif · vysoký tarif) | NT · VT do 16:55 (nízký tarif · vysoký tarif) |
 | Status: unavailable | unavailable — Temperature sensors are unavailable | nedostupné — Teplotné senzory sú nedostupné | nedostupné — Teplotní senzory jsou nedostupné |
 | History | HISTORY · now · heated by heating · electricity · electricity used · boiler heated radiators | HISTÓRIA · teraz · ohrev z kúrenia · elektrina · spotreba elektriny · bojler kúril radiátory | HISTORIE · teď · ohřev z topení · elektřina · spotřeba elektřiny · bojler topil radiátory |

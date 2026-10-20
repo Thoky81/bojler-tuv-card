@@ -23,7 +23,7 @@ const I18N = {
     pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
     sw_on: 'ZAP', sw_off: 'VYP', sw_off_label: 'špirála vypnutá', sw_off_txt: 'Elektrická špirála je vypnutá vypínačom',
     until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízky tarif', vt_long: 'vysoký tarif',
-    blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická špirála je vypnutá',
+    blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: špirála je bez prúdu',
   },
   cs: {
     title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
@@ -48,7 +48,7 @@ const I18N = {
     pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
     sw_on: 'ZAP', sw_off: 'VYP', sw_off_label: 'spirála vypnutá', sw_off_txt: 'Elektrická spirála je vypnutá vypínačem',
     until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízký tarif', vt_long: 'vysoký tarif',
-    blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická spirála je vypnutá',
+    blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: spirála je bez proudu',
   },
   en: {
     title: 'Boiler', BOILER: 'BOILER', boiler: 'boiler',
@@ -73,7 +73,7 @@ const I18N = {
     pick: 'Pick the boiler temperature and the valve in the card editor.',
     sw_on: 'ON', sw_off: 'OFF', sw_off_label: 'element off', sw_off_txt: 'The electric element is switched off',
     until: 'until', nt: 'off-peak', vt: 'peak', nt_long: 'off-peak tariff', vt_long: 'peak tariff',
-    blocked: 'peak tariff', blocked_txt: 'Peak tariff: the electric element is switched off',
+    blocked: 'peak tariff', blocked_txt: 'Peak tariff: the element gets no power',
   },
 };
 // optional tariff entity: true = low tariff, false = high tariff, null = no tariff / unknown.
