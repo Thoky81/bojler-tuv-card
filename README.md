@@ -1,6 +1,6 @@
 # Bojler TUV Card
 
-A Home Assistant dashboard card for a combined hot-water boiler (Slovak *bojler*; *TUV* = *teplá úžitková voda*, domestic hot water) that can be heated two ways: by its electric element, or by water from the central-heating circuit through a coil, switched by a valve.
+A Home Assistant dashboard card for a combined hot-water boiler that can be heated two ways: by its electric element, or by water from the central-heating circuit through a coil, switched by a valve. *Bojler* is Slovak and Czech for boiler, *TUV* (*teplá úžitková voda*) for domestic hot water.
 
 ![Bojler TUV Card](docs/screenshot.png)
 
@@ -8,13 +8,15 @@ The card draws the boiler, the coil, the valve and the electric element. Pipe co
 
 It also tells you what is going on:
 
-| Status | In English | When |
-|---|---|---|
-| **ohrev z kúrenia** (green) | heated by the heating | Valve open and the heating water is warmer than the boiler |
-| **bojler kúri radiátory** (red) | boiler is heating the radiators | Valve open but the heating water is colder than the boiler, so the boiler is heating your radiators |
-| **kúrenie je teplé** (blue) | heating water is warm | Valve closed although the supply is warmer than the boiler by at least `min_delta` |
-| **elektrický ohrev** (orange) | electric heating | The electric element is on and the heating water is too cold to help |
-| **pohotovosť** (grey) | standby | Nothing is heating |
+| Status | Slovenčina | Čeština | When |
+|---|---|---|---|
+| **heated by heating** (green) | ohrev z kúrenia | ohřev z topení | Valve open and the heating water is warmer than the boiler |
+| **boiler heats radiators** (red) | bojler kúri radiátory | bojler topí radiátory | Valve open but the heating water is colder than the boiler, so the boiler is heating your radiators |
+| **heating is warm** (blue) | kúrenie je teplé | topení je teplé | Valve closed although the supply is warmer than the boiler by at least `min_delta` |
+| **electric heating** (orange) | elektrický ohrev | elektrický ohřev | The electric element is on and the heating water is too cold to help |
+| **standby** (grey) | pohotovosť | pohotovost | Nothing is heating |
+
+The values row under the drawing shows **supply − boiler** (positive means the heating water is warmer and worth using) and **coil Δ** (into the coil minus out of it: how much the water cooled in the boiler, shown only while the valve is open). Hover a value to see the calculation.
 
 Below the drawing, a history section (last 24 hours by default) shows:
 
@@ -22,52 +24,62 @@ Below the drawing, a history section (last 24 hours by default) shows:
 - **Boiler vs. supply graph:** boiler as the thick line, supply as the thin one; green area where the heating water was warmer than the boiler, red where the valve was open although it was colder.
 - **Hourly bars:** minutes per hour heated by the heating water (green) and by electricity (orange).
 
-The values row under the drawing shows **prívod − bojler** (supply − boiler: positive means the heating water is warmer and worth using) and **výmenník Δ** (coil Δ: into the coil minus out of it: how much the water cooled in the boiler, shown only while the valve is open). Hover a value to see the calculation.
+Move the mouse or a finger over the graph to read the values at that time. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant.
 
-Move the mouse or a finger over the graph to read the values at that time. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant. The card speaks **Slovak, Czech and English**: by default it follows your Home Assistant language, or pick one in the editor under *Language*. You can also rename the title and the pipe labels; leave them empty for the default text of the chosen language.
+## Languages
 
-## Slovak labels
+The card speaks **English, Slovak and Czech**, including the card editor. By default it follows your Home Assistant language (English for any language other than Slovak or Czech); pick one in the editor under *Language* or set `language: en`, `sk` or `cs`. You can rename the title and the pipe labels; leave them empty for the default text of the chosen language.
 
-The card is also available in English and Czech (set *Language* in the editor). The tables below translate the Slovak texts for readers of this page and of the screenshot.
+### In the card
 
-| In the card | In English |
-|---|---|
-| Bojler | Boiler |
-| PRÍVOD · DO BOJLERA · SPIATOČKA | Supply · Into the boiler · Return |
-| TEPLÁ VODA · STUDENÁ VODA | Hot water · Cold water |
-| ventil · OTVORENÝ · ZATVORENÝ · nedostupný | valve · open · closed · unavailable |
-| výmenník | coil (heat exchanger) |
-| elektrina · špirála | electricity · electric element |
-| ⚡ elektrina (header badge) | electric element is on |
-| Kúrenie ohrieva bojler · výmenník odovzdáva 12.5° | The heating is heating the boiler · the coil passes on 12.5° |
-| Ohrieva elektrina · kúrenie je chladnejšie ako bojler | Electricity is heating · the heating water is colder than the boiler |
-| Prívod je o 9° teplejší ako bojler, ventil by mohol otvoriť | The supply is 9° warmer than the boiler, the valve could open |
-| Ventil zatvorený · prívod je o 5° chladnejší ako bojler | Valve closed · the supply is 5° colder than the boiler |
-| Teplotné senzory sú nedostupné | Temperature sensors are unavailable |
-| HISTÓRIA · 24 h · teraz | History · 24 h · now |
-| ohrev z kúrenia · elektrina · spotreba elektriny | heated by the heating · electricity · electricity used |
-| bojler kúril radiátory | boiler heated the radiators |
-| kúrenie 10 min · elektrina 0 min (graph hover) | heating 10 min · electricity 0 min in that hour |
-| Načítavam históriu… · História nie je dostupná | Loading history… · History is not available |
+|  | English | Slovenčina | Čeština |
+| --- | --- | --- | --- |
+| Title | Boiler | Bojler | Bojler |
+| Pipe labels | SUPPLY · TO BOILER · RETURN | PRÍVOD · DO BOJLERA · SPIATOČKA | PŘÍVOD · DO BOJLERU · ZPÁTEČKA |
+| Water pipes | HOT WATER · COLD WATER | TEPLÁ VODA · STUDENÁ VODA | TEPLÁ VODA · STUDENÁ VODA |
+| Valve | valve · open · closed · unavailable | ventil · otvorený · zatvorený · nedostupný | ventil · otevřený · zavřený · nedostupný |
+| Values row | boiler · supply − boiler · coil Δ · electricity | bojler · prívod − bojler · výmenník Δ · elektrina | bojler · přívod − bojler · výměník Δ · elektřina |
+| Header badges | ⚡ electric · valve unavailable | ⚡ elektrina · ventil nedostupný | ⚡ elektřina · ventil nedostupný |
+| Status: heated by heating | heated by heating — The heating is warming the boiler · the coil passes on 12.5° | ohrev z kúrenia — Kúrenie ohrieva bojler · výmenník odovzdáva 12.5° | ohřev z topení — Topení ohřívá bojler · výměník předává 12.5° |
+| Status: boiler heats radiators | boiler heats radiators — The valve is open, but the heating water (44.0°) is colder than the boiler (51.5°). The boiler is heating the radiators. | bojler kúri radiátory — Ventil je otvorený, ale voda z kúrenia (44.0°) je chladnejšia ako bojler (51.5°). Bojler ohrieva radiátory. | bojler topí radiátory — Ventil je otevřený, ale voda z topení (44.0°) je chladnější než bojler (51.5°). Bojler ohřívá radiátory. |
+| Status: heating is warm | heating is warm — The supply is 9.0° warmer than the boiler, the valve could open | kúrenie je teplé — Prívod je o 9.0° teplejší ako bojler, ventil by mohol otvoriť | topení je teplé — Přívod je o 9.0° teplejší než bojler, ventil by mohl otevřít |
+| Status: electric heating | electric heating — Electricity is heating · the heating water is colder than the boiler | elektrický ohrev — Ohrieva elektrina · kúrenie je chladnejšie ako bojler | elektrický ohřev — Ohřívá elektřina · topení je chladnější než bojler |
+| Status: standby | standby — Valve closed · the supply is 5.0° colder than the boiler | pohotovosť — Ventil zatvorený · prívod je o 5.0° chladnejší ako bojler | pohotovost — Ventil zavřený · přívod je o 5.0° chladnější než bojler |
+| Status: unavailable | unavailable — Temperature sensors are unavailable | nedostupné — Teplotné senzory sú nedostupné | nedostupné — Teplotní senzory jsou nedostupné |
+| History | HISTORY · now · heated by heating · electricity · electricity used · boiler heated radiators | HISTÓRIA · teraz · ohrev z kúrenia · elektrina · spotreba elektriny · bojler kúril radiátory | HISTORIE · teď · ohřev z topení · elektřina · spotřeba elektřiny · bojler topil radiátory |
+| Graph hover | heating 10 min · electricity 0 min | kúrenie 10 min · elektrina 0 min | topení 10 min · elektřina 0 min |
+| Messages | Loading history… · History is not available · Pick the boiler temperature and the valve in the card editor. | Načítavam históriu… · História nie je dostupná · Vyber entitu bojlera (teplota) a ventilu v editore karty. | Načítám historii… · Historie není dostupná · Vyberte entitu teploty bojleru a ventil v editoru karty. |
 
-| In the editor | In English |
-|---|---|
-| Názov | Title |
-| Teplota bojlera | Boiler temperature |
-| Prívod z kúrenia (pred ventilom) | Heating supply (in front of the valve) |
-| Do bojlera (za ventilom) | Into the boiler (after the valve) |
-| Spiatočka (z výmenníka) | Return (out of the coil) |
-| Ventil | Valve |
-| Aktuálny príkon špirály | Current power of the electric element |
-| Elektrická špirála (zap/vyp) | Electric element (on/off) |
-| História · Zobraziť históriu · Obdobie · Vyhladenie čiar | History · Show history · Period · Line smoothing |
-| Rozšírené | Advanced |
-| Modrá pri · Červená pri | Blue at · Red at |
-| Min. rozdiel na ohrev · Tolerancia alarmu · Špirála kúri nad | Min. difference to heat · Alarm tolerance · Element heats above |
-| Animácia toku · Hlavička · Riadok s hodnotami · Stavový pruh | Flow animation · Header · Values row · Status bar |
-| Popis: prívod / do bojlera / spiatočka | Label: supply / into the boiler / return |
+### In the editor
 
-The blueprint's name, *Bojler – ohrev z kúrenia*, means "Boiler – heating from the central heating"; its settings are in English.
+| Option | English | Slovenčina | Čeština |
+| --- | --- | --- | --- |
+| `language` | Language | Jazyk | Jazyk |
+| `title` | Title | Názov | Název |
+| `boiler` | Boiler temperature | Teplota bojlera | Teplota bojleru |
+| `supply` | Heating supply (in front of the valve) | Prívod z kúrenia (pred ventilom) | Přívod z topení (před ventilem) |
+| `coil_in` | Into the boiler (after the valve) | Do bojlera (za ventilom) | Do bojleru (za ventilem) |
+| `coil_out` | Return (out of the coil) | Spiatočka (z výmenníka) | Zpátečka (z výměníku) |
+| `valve` | Valve | Ventil | Ventil |
+| `heater_power` | Current power of the electric element (W or kW sensor) | Aktuálny príkon špirály (senzor W alebo kW) | Aktuální příkon spirály (senzor W nebo kW) |
+| `heater` | Electric element (on/off) | Elektrická špirála (zap/vyp) | Elektrická spirála (zap/vyp) |
+| *(section)* | History | História | Historie |
+| `show_graph` | Show history | Zobraziť históriu | Zobrazit historii |
+| `graph_hours` | Period | Obdobie | Období |
+| `graph_smooth` | Line smoothing | Vyhladenie čiar | Vyhlazení čar |
+| *(section)* | Advanced | Rozšírené | Rozšířené |
+| `cold` | Blue at | Modrá pri | Modrá při |
+| `hot` | Red at | Červená pri | Červená při |
+| `min_delta` | Min. difference to heat | Min. rozdiel na ohrev | Min. rozdíl pro ohřev |
+| `reverse_tol` | Alarm tolerance | Tolerancia alarmu | Tolerance alarmu |
+| `heater_on_w` | Element heats above | Špirála kúri nad | Spirála topí nad |
+| `animate` | Flow animation | Animácia toku | Animace toku |
+| `show_header` | Header | Hlavička | Hlavička |
+| `show_stats` | Values row | Riadok s hodnotami | Řádek s hodnotami |
+| `show_banner` | Status bar | Stavový pruh | Stavový pruh |
+| `label_supply` | Label: supply | Popis: prívod | Popisek: přívod |
+| `label_coil_in` | Label: into the boiler | Popis: do bojlera | Popisek: do bojleru |
+| `label_coil_out` | Label: return | Popis: spiatočka | Popisek: zpátečka |
 
 ## Install with HACS
 
@@ -96,8 +108,8 @@ heater_power: sensor.bojler_power              # electric element power in W
 
 | Option | Default | What it does |
 |---|---|---|
-| `language` | `auto` | `auto` (Home Assistant's language), `sk`, `cs` or `en` |
-| `title` | *Bojler* / *Boiler* | Card title; empty = default of the language |
+| `language` | `auto` | `auto` (Home Assistant's language), `en`, `sk` or `cs` |
+| `title` | *Boiler* / *Bojler* | Card title; empty = default of the language |
 | `boiler` | — | Boiler water temperature sensor (required) |
 | `supply` | — | Heating supply temperature, before the valve |
 | `coil_in` | — | Temperature after the valve, going into the coil |
@@ -114,7 +126,7 @@ heater_power: sensor.bojler_power              # electric element power in W
 | `show_graph` | `true` | Show the history section |
 | `graph_hours` | `24` | Hours of history (1–168) |
 | `graph_smooth` | `20` | Minutes of rolling average for the graph lines, so a cycling heat source doesn't zigzag (`0` = raw readings) |
-| `label_supply` / `label_coil_in` / `label_coil_out` | language default | Pipe labels; empty = *PRÍVOD / DO BOJLERA / SPIATOČKA* (sk), *PŘÍVOD / DO BOJLERU / ZPÁTEČKA* (cs), *SUPPLY / TO BOILER / RETURN* (en) |
+| `label_supply` / `label_coil_in` / `label_coil_out` | language default | Pipe labels; empty = *SUPPLY / TO BOILER / RETURN* (en), *PRÍVOD / DO BOJLERA / SPIATOČKA* (sk), *PŘÍVOD / DO BOJLERU / ZPÁTEČKA* (cs) |
 
 ## Performance
 
@@ -128,7 +140,7 @@ The card shows when the boiler heats the radiators; this blueprint keeps it from
 
 Or: Settings → Automations & scenes → Blueprints → **Import blueprint**, and paste `https://github.com/Thoky81/bojler-tuv-card/blob/main/blueprints/bojler-ohrev-z-kurenia.yaml`. Then create an automation from it and pick your supply sensor (in front of the valve), boiler sensor and valve switch. Disable any older automation that switches the same valve.
 
-The default "Open above" of 3 °C matches the card's `min_delta`, so the card's blue "kúrenie je teplé" (heating water is warm) status and the automation agree.
+The default "Open above" of 3 °C matches the card's `min_delta`, so the card's blue "heating is warm" status and the automation agree.
 
 ## Without HACS
 

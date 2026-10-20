@@ -1,5 +1,5 @@
 blueprint:
-  name: Bojler – ohrev z kúrenia
+  name: Boiler – heat from the central heating (Bojler – ohrev z kúrenia)
   description: >
     Opens the boiler valve when the heating water is warmer than the boiler by at least
     "Open above", and closes it when it is warmer by less than "Close below", so the
