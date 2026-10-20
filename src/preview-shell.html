@@ -1,0 +1,242 @@
+<title>Bojler TUV Card</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600&display=swap">
+<style>
+  /* Layout: control strip on top, variant cards in a wrapping grid at real HA card widths */
+  :root {
+    --bg: #f3f1ee;
+    --panel: #ffffff;
+    --fg: #212121;
+    --fg-2: #727272;
+    --line: rgba(0, 0, 0, 0.12);
+    --chip: rgba(0, 0, 0, 0.05);
+    --font: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    /* Home Assistant variables the card reads */
+    --primary-text-color: var(--fg);
+    --secondary-text-color: var(--fg-2);
+    --disabled-text-color: #bdbdbd;
+    --divider-color: var(--line);
+    --card-background-color: var(--panel);
+    --success-color: #43a047;
+    --error-color: #db4437;
+    --warning-color: #ffa600;
+    --info-color: #039be5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111111; --panel: #1f1f1f; --fg: #e1e1e1; --fg-2: #9b9b9b;
+      --line: rgba(255, 255, 255, 0.12); --chip: rgba(255, 255, 255, 0.07);
+      --disabled-text-color: #6f6f6f; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111111; --panel: #1f1f1f; --fg: #e1e1e1; --fg-2: #9b9b9b;
+    --line: rgba(255, 255, 255, 0.12); --chip: rgba(255, 255, 255, 0.07);
+    --disabled-text-color: #6f6f6f; color-scheme: dark;
+  }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font);
+    padding-block: 24px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .page { max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  header { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0; text-wrap: balance; }
+  header p { margin: 4px 0 0; color: var(--fg-2); font-size: 13px; max-width: 65ch; }
+  .theme { margin-left: auto; }
+  button, .chip {
+    font: inherit; font-size: 12.5px; color: var(--fg); background: var(--chip);
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  }
+  button:hover { border-color: var(--fg-2); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--info-color); outline-offset: 2px; }
+  button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+  .controls {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+    display: grid; gap: 14px;
+  }
+  .label { font-size: 10.5px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--fg-2); }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .presets .label { margin-right: 4px; }
+  .sliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 20px; }
+  .slider { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; min-width: 0; }
+  .slider label { font-size: 12.5px; color: var(--fg-2); }
+  .slider output { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .slider input { grid-column: 1 / -1; width: 100%; accent-color: var(--fg-2); }
+  .slider input.temp {
+    -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px;
+    background: linear-gradient(90deg, hsl(215,78%,50%), hsl(161,78%,45%), hsl(108,78%,43%), hsl(54,78%,45%), hsl(0,78%,50%));
+  }
+  .slider input.temp::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--panel); border: 2px solid var(--fg); cursor: pointer; }
+  .slider input.temp::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--panel); border: 2px solid var(--fg); cursor: pointer; }
+  .toggles { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .toggles .note { font-size: 12px; color: var(--fg-2); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 20px; align-items: start; }
+  figure { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  figcaption { display: flex; flex-direction: column; gap: 2px; }
+  figcaption b { font-size: 14px; font-weight: 500; }
+  figcaption span { font-size: 12.5px; color: var(--fg-2); line-height: 1.4; }
+  .ha-card {
+    background: var(--card-background-color); border-radius: 12px; padding: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); min-width: 0; max-width: 520px;
+  }
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 12.5px;
+    opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  ha-icon { display: inline-flex; width: var(--mdc-icon-size, 24px); height: var(--mdc-icon-size, 24px); }
+  ha-icon svg { width: 100%; height: 100%; fill: currentColor; }
+</style>
+
+<div class="page">
+  <header>
+    <div>
+      <h1>Bojler + TUV karta · návrhy</h1>
+      <p>Štyri rozloženia tej istej karty. Hodnoty nižšie sú simulované, posuvníkmi alebo predvoľbami vyskúšaš stavy. Farba potrubia ide od modrej (0&nbsp;°C) po červenú (80&nbsp;°C). Kliknutie na teplotu v HA otvorí históriu senzora.</p>
+    </div>
+    <button class="theme" id="theme" type="button">Tmavý režim</button>
+  </header>
+
+  <section class="controls" aria-label="Simulácia">
+    <div class="presets" id="presets"><span class="label">Stav</span></div>
+    <div class="sliders" id="sliders"></div>
+    <div class="toggles">
+      <button type="button" id="valve" aria-pressed="false">Ventil</button>
+      <button type="button" id="heater" aria-pressed="false">Elektrická špirála</button>
+      <button type="button" id="anim" aria-pressed="true">Animácia toku</button>
+      <span class="note">Elektrická špirála: sensor.bojler_power, nad 50 W sa ráta ako ohrev.</span>
+    </div>
+  </section>
+
+  <div class="grid" id="grid"></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const PREVIEW_CFG = /*CFG*/;
+/*RENDER*/
+
+const ICONS = {
+  'mdi:water-boiler': 'M8 2h8a3 3 0 0 1 3 3v13a3 3 0 0 1-3 3h-1v1h-2v-1h-2v1H9v-1H8a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3m0 2a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H8m4 4c1.5 2 2.5 3.3 2.5 4.5a2.5 2.5 0 0 1-5 0C9.5 11.3 10.5 10 12 8Z',
+  'mdi:check-circle': 'M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z',
+  'mdi:alert': 'M13 14H11V9H13M13 18H11V16H13M1 21H23L12 2L1 21Z',
+  'mdi:information': 'M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z',
+  'mdi:flash': 'M7,2V13H10V22L17,10H13L17,2H7Z',
+  'mdi:power-sleep': 'M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z',
+  'mdi:lan-disconnect': 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20m5 11H7v-2h10v2Z',
+};
+customElements.define('ha-icon', class extends HTMLElement {
+  connectedCallback() {
+    const d = ICONS[this.getAttribute('icon')] || ICONS['mdi:lan-disconnect'];
+    this.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+  }
+});
+
+const VARIANTS = [
+  { id: 'a', fn: renderA, name: 'A · Schéma', desc: 'Nákres bojlera s výmenníkom, ventilom a elektrickou špirálou. Teploty sedia priamo na potrubí, tok vody sa hýbe, keď je ventil otvorený.' },
+  { id: 'b', fn: renderB, name: 'B · Teplotné pruhy', desc: 'Každá rúra má pruh 0–80 °C a prerušovaná čiara ukazuje teplotu bojlera. Na prvý pohľad vidno, či je kúrenie teplejšie alebo chladnejšie ako bojler.' },
+  { id: 'c', fn: renderC, name: 'C · Budík + potrubie', desc: 'Veľký ukazovateľ teploty bojlera so značkou prívodu. Pod ním jedna rúra, ktorej farba plynule prechádza medzi senzormi.' },
+  { id: 'd', fn: renderD, name: 'D · Kompaktná', desc: 'Malá dlaždica do prehľadu: stav, teplota bojlera a farebný pásik potrubia s ventilom.' },
+];
+
+const E = PREVIEW_CFG;
+const SENSORS = [
+  ['boiler', 'Bojler'], ['supply', 'Prívod z kúrenia'], ['coil_in', 'Do bojlera (za ventilom)'], ['coil_out', 'Spiatočka'],
+];
+const PRESETS = {
+  'Kúrenie ohrieva bojler': { boiler: 48, supply: 66, coil_in: 64.5, coil_out: 52, valve: true, heater: false },
+  'Bojler kúri radiátory': { boiler: 55, supply: 38, coil_in: 37, coil_out: 41, valve: true, heater: true },
+  'Elektrický ohrev': { boiler: 42, supply: 28, coil_in: 24, coil_out: 23, valve: false, heater: true },
+  'Kúrenie teplé, ventil zatvorený': { boiler: 44, supply: 58, coil_in: 31, coil_out: 29, valve: false, heater: false },
+  'Pohotovosť': { boiler: 57, supply: 45, coil_in: 30, coil_out: 29, valve: false, heater: false },
+  'Senzory nedostupné': { boiler: null, supply: null, coil_in: null, coil_out: null, valve: false, heater: false },
+};
+const sim = { ...PRESETS['Kúrenie ohrieva bojler'], animate: true, valveChanged: Date.now() - 14 * 60000 };
+
+const $ = id => document.getElementById(id);
+const sliders = $('sliders');
+for (const [key, label] of SENSORS) {
+  sliders.insertAdjacentHTML('beforeend', `
+    <div class="slider">
+      <label for="s-${key}">${label}</label><output id="o-${key}" for="s-${key}"></output>
+      <input class="temp" id="s-${key}" type="range" min="0" max="80" step="0.5">
+    </div>`);
+  $('s-' + key).addEventListener('input', e => { sim[key] = parseFloat(e.target.value); render(); });
+}
+const presets = $('presets');
+for (const name of Object.keys(PRESETS)) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = name;
+  b.addEventListener('click', () => {
+    const wasOpen = sim.valve;
+    Object.assign(sim, PRESETS[name]);
+    if (sim.valve !== wasOpen) sim.valveChanged = Date.now();
+    render();
+  });
+  presets.appendChild(b);
+}
+$('valve').addEventListener('click', () => { sim.valve = !sim.valve; sim.valveChanged = Date.now(); render(); });
+$('heater').addEventListener('click', () => { sim.heater = !sim.heater; render(); });
+$('anim').addEventListener('click', () => { sim.animate = !sim.animate; render(); });
+
+const root = document.documentElement;
+const isDark = () => root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+const syncTheme = () => { $('theme').textContent = isDark() ? 'Svetlý režim' : 'Tmavý režim'; };
+$('theme').addEventListener('click', () => { root.dataset.theme = isDark() ? 'light' : 'dark'; syncTheme(); });
+syncTheme();
+
+let toastTimer;
+document.addEventListener('hass-more-info', e => {
+  const t = $('toast');
+  t.textContent = `V HA sa otvorí detail: ${e.detail.entityId}`;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+});
+
+function mockStates() {
+  const s = {};
+  const iso = Date.now() - 3 * 60000;
+  for (const [key] of SENSORS) {
+    s[E[key]] = { state: sim[key] === null ? 'unavailable' : String(sim[key]), last_changed: new Date(iso).toISOString() };
+  }
+  s[E.valve] = { state: sim.valve ? 'on' : 'off', last_changed: new Date(sim.valveChanged).toISOString() };
+  s[E.heater] = { state: sim.heater ? 'on' : 'off' };
+  s[E.heater_power] = { state: sim.heater ? '1980' : '0' };
+  return s;
+}
+
+const grid = $('grid');
+for (const v of VARIANTS) {
+  grid.insertAdjacentHTML('beforeend', `
+    <figure>
+      <figcaption><b>${v.name}</b><span>${v.desc}</span></figcaption>
+      <div class="ha-card" id="card-${v.id}"></div>
+    </figure>`);
+}
+
+function render() {
+  for (const [key] of SENSORS) {
+    const val = sim[key];
+    $('s-' + key).value = val === null ? 0 : val;
+    $('s-' + key).disabled = val === null;
+    $('o-' + key).textContent = val === null ? 'nedostupné' : val.toFixed(1) + ' °C';
+  }
+  $('valve').setAttribute('aria-pressed', sim.valve);
+  $('valve').textContent = sim.valve ? 'Ventil otvorený' : 'Ventil zatvorený';
+  $('heater').setAttribute('aria-pressed', sim.heater);
+  $('anim').setAttribute('aria-pressed', sim.animate);
+  const states = mockStates();
+  for (const v of VARIANTS) {
+    const cfg = { ...E, uid: 'bt' + v.id, animate: sim.animate };
+    $('card-' + v.id).innerHTML = v.fn(states, cfg);
+  }
+}
+render();
+</script>
