@@ -45,7 +45,7 @@ return wrap(`
     </div>
     <div style="margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:10.5px;color:${SEC}">
       <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;border-top:1.5px dashed ${cB}"></span>teplota bojlera</span>
-      ${heating ? `<span style="color:${WRN};font-weight:600">⚡ elektrina ${pw !== null ? (pw >= 1000 ? (pw / 1000).toFixed(1) + ' kW' : Math.round(pw) + ' W') : 'zapnutá'}</span>` : ''}
+      ${heating ? `<span style="color:${WRN};font-weight:600">⚡ elektrina ${pw !== null ? pwTxt : 'zapnutá'}</span>` : ''}
     </div>
   </div>
   <div>

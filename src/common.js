@@ -37,7 +37,11 @@ const tb = num(C.boiler), t1 = num(C.supply), t2 = num(C.coil_in), t3 = num(C.co
 const vS = states[C.valve];
 const vOk = ok(vS);
 const open = isOn(C.valve);
-const pw = num(C.heater_power);
+// power as the sensor reports it (value + its own unit); pw is converted to W for the threshold
+const pwUnit = (C.heater_power && states[C.heater_power]?.attributes?.unit_of_measurement) || 'W';
+const pwRaw = num(C.heater_power);
+const pw = pwRaw === null ? null : pwRaw * ({ kW: 1e3, MW: 1e6 }[pwUnit] || 1);
+const pwTxt = pwRaw === null ? '' : `${pwUnit === 'W' ? Math.round(pwRaw) : +pwRaw.toFixed(2)} ${pwUnit}`;
 const hasHeater = !!(C.heater || C.heater_power);
 const heating = (C.heater && isOn(C.heater)) || (pw !== null && pw > C.heater_on_w);
 const tin = t2 !== null ? t2 : t1;

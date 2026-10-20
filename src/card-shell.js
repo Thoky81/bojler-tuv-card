@@ -164,7 +164,7 @@ const LABELS = {
   coil_in: 'Do bojlera (za ventilom)',
   coil_out: 'Spiatočka (z výmenníka)',
   valve: 'Ventil',
-  heater_power: 'Príkon elektrickej špirály (W)',
+  heater_power: 'Aktuálny príkon špirály (senzor W alebo kW)',
   heater: 'Elektrická špirála (zap/vyp)',
   cold: 'Modrá pri',
   hot: 'Červená pri',

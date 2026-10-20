@@ -12,6 +12,7 @@ const gTc = (t, cfg) => {
   return `hsl(${Math.round(215 - 215 * k)},78%,${Math.round(50 - 7 * Math.sin(Math.PI * k))}%)`;
 };
 const numOf = s => { const v = s ? parseFloat(s) : NaN; return isFinite(v) ? v : null; };
+const wFactor = (hass, id) => ({ kW: 1e3, MW: 1e6 }[hass.states[id]?.attributes?.unit_of_measurement] || 1);
 const graphKey = cfg => JSON.stringify([cfg.graph_smooth, cfg.show_graph, cfg.graph_hours, cfg.boiler, cfg.supply, cfg.valve, cfg.heater, cfg.heater_power, cfg.heater_on_w]);
 const GSUC = 'var(--success-color, #43a047)', GERR = 'var(--error-color, #db4437)', GWRN = 'var(--warning-color, #ffa600)', GSEC = 'var(--secondary-text-color, #727272)';
 
@@ -20,7 +21,7 @@ async function loadHistory(hass, cfg) {
   const numIds = [...new Set([cfg.boiler, cfg.supply, cfg.heater_power].filter(Boolean))];
   let stats = {};
   try {
-    stats = await hass.callWS({ type: 'recorder/statistics_during_period', start_time, statistic_ids: numIds, period: '5minute', types: ['mean'] });
+    stats = await hass.callWS({ type: 'recorder/statistics_during_period', start_time, statistic_ids: numIds, period: '5minute', types: ['mean'], units: { power: 'W' } });
   } catch (e) { stats = {}; }
   const hasStats = id => stats[id] && stats[id].length;
   const histIds = [...new Set([cfg.valve, cfg.heater_power ? '' : cfg.heater, ...numIds.filter(id => !hasStats(id))].filter(Boolean))];
@@ -45,7 +46,8 @@ async function loadHistory(hass, cfg) {
   const numeric = id => !id ? [] : hasStats(id)
     ? stats[id].map(p => [ms(p.start), p.mean ?? null])
     : thin(raw(id).map(([t, s]) => [t, numOf(s)]));
-  const power = cfg.heater_power ? numeric(cfg.heater_power) : null;
+  const pf = cfg.heater_power && !hasStats(cfg.heater_power) ? wFactor(hass, cfg.heater_power) : 1;
+  const power = cfg.heater_power ? numeric(cfg.heater_power).map(([t, v]) => [t, v === null ? null : v * pf]) : null;
   return {
     t0, t1, power,
     series: { boiler: numeric(cfg.boiler), supply: numeric(cfg.supply) },
@@ -68,7 +70,7 @@ function appendLive(d, hass, cfg) {
   const vs = hass.states[cfg.valve]?.state;
   if (vs !== undefined) pushBool(d.valve, ON_STATES.includes(vs));
   if (d.power) {
-    const w = numOf(hass.states[cfg.heater_power]?.state);
+    const w0 = numOf(hass.states[cfg.heater_power]?.state), w = w0 === null ? null : w0 * wFactor(hass, cfg.heater_power);
     pushNum(d.power, w);
     pushBool(d.heat, w !== null && w > cfg.heater_on_w);
   } else if (d.heat) pushBool(d.heat, ON_STATES.includes(hass.states[cfg.heater]?.state));

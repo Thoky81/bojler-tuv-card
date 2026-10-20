@@ -38,7 +38,7 @@ const svg = `
     <path d="M318 192 H246 a5 5 0 0 0 0 10 H318" style="fill:none;stroke:${heating ? WRN : SEC};stroke-opacity:${heating ? 1 : .45};stroke-width:3;stroke-linecap:round"/>
     <rect x="315" y="186" width="9" height="22" rx="2" style="fill:${SEC};fill-opacity:.5"/>
     ${hasHeater ? `<path d="M7,2V13H10V22L17,10H13L17,2H7Z" transform="translate(326 183) scale(.8)" style="fill:${heating ? WRN : SEC};fill-opacity:${heating ? 1 : .5}"/>` : ''}
-    ${pw !== null && heating ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${heating ? WRN : SEC}">${pw >= 1000 ? (pw / 1000).toFixed(1) + ' kW' : Math.round(pw) + ' W'}</text>` : ''}
+    ${pw !== null && heating ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${heating ? WRN : SEC}">${pwTxt}</text>` : ''}
   </g>
 
   <!-- heating circuit -->
@@ -77,7 +77,7 @@ let cells = cell('bojler', f(tb), cB, C.boiler)
   + cell('výmenník Δ', open ? sg(dCoil) : '—', dCol, C.coil_in,
     open ? `${C.label_coil_in.toLowerCase()} ${f(t2)} − ${C.label_coil_out.toLowerCase()} ${f(t3)}` : 'len pri otvorenom ventile')
   + cell(vOk ? `ventil · ${ago(vS.last_changed)}` : 'ventil', vTxt, vCol, C.valve);
-if (pw !== null) cells += cell('elektrina', pw >= 1000 ? (pw / 1000).toFixed(2) + ' kW' : Math.round(pw) + ' W', heating ? WRN : SEC, C.heater_power);
+if (pw !== null) cells += cell('elektrina', pwTxt, heating ? WRN : SEC, C.heater_power, C.heater_power);
 else if (C.heater) cells += cell('elektrina', heating ? 'zapnutá' : 'vypnutá', heating ? WRN : SEC, C.heater);
 
 return wrap(`
