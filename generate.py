@@ -40,7 +40,7 @@ CONFIG = {
     "show_stats": True,
     "show_banner": True,
 }
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 # preview only: extra config for the simulated page
 PREVIEW_EXTRA = {}
 
