@@ -48,6 +48,17 @@ const pw = pwRaw === null ? null : pwRaw * ({ kW: 1e3, MW: 1e6 }[pwUnit] || 1);
 const pwTxt = pwRaw === null ? '' : `${pwUnit === 'W' ? Math.round(pwRaw) : +pwRaw.toFixed(2)} ${pwUnit}`;
 const hasHeater = !!(C.heater || C.heater_power);
 const heating = (C.heater && isOn(C.heater)) || (pw !== null && pw > C.heater_on_w);
+const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
+// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
+const tUntil = (() => {
+  const s = C.tariff_until && states[C.tariff_until];
+  if (!ok(s)) return '';
+  const m = String(s.state).match(/\b(\d{1,2}:\d{2})\b/);
+  if (m && !/^\d{4}-/.test(s.state)) return m[1];
+  const t = Date.parse(s.state);
+  return isFinite(t) ? new Date(t).toLocaleTimeString(LANG, { hour: '2-digit', minute: '2-digit', hour12: C.hour12 }) : '';
+})();
+const untilTxt = tUntil ? ` ${T.until} ${tUntil}` : '';
 const tin = t2 !== null ? t2 : t1;
 const dSup = t1 !== null && tb !== null ? t1 - tb : null;
 const dIn = tin !== null && tb !== null ? tin - tb : null;
@@ -61,12 +72,14 @@ else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert
 else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
 else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
 else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else if (lowT === false) st = { k: 'blocked', c: SEC, icon: 'mdi:power-plug-off', label: T.blocked + untilTxt, txt: T.blocked_txt + untilTxt };
 else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
-const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
+const pill = (txt, c, tip = '') => `<span ${tip ? `title="${tip}"` : ''} style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
 if (!vOk) pills += pill(T.valve_unavailable, SEC);
 if (heating && st.k !== 'el') pills += pill(T.el_badge, WRN);
+if (lowT !== null && st.k !== 'blocked') pills += pill((lowT ? T.nt : T.vt) + untilTxt, lowT ? INF : SEC, (lowT ? T.nt_long : T.vt_long) + untilTxt);
 pills += pill(st.label, st.c);
 
 

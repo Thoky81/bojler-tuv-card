@@ -14,6 +14,7 @@ It also tells you what is going on:
 | **boiler heats radiators** (red) | bojler kúri radiátory | bojler topí radiátory | Valve open but the heating water is colder than the boiler, so the boiler is heating your radiators |
 | **heating is warm** (blue) | kúrenie je teplé | topení je teplé | Valve closed although the supply is warmer than the boiler by at least `min_delta` |
 | **electric heating** (orange) | elektrický ohrev | elektrický ohřev | The electric element is on and the heating water is too cold to help |
+| **peak tariff** (grey) | vysoký tarif | vysoký tarif | Only with a tariff entity: peak tariff, the electric element is switched off by the utility |
 | **standby** (grey) | pohotovosť | pohotovost | Nothing is heating |
 
 The values row under the drawing shows **supply − boiler** (positive means the heating water is warmer and worth using) and **coil Δ** (into the coil minus out of it: how much the water cooled in the boiler, shown only while the valve is open). Hover a value to see the calculation.
@@ -23,6 +24,8 @@ Below the drawing, a history section (last 24 hours by default) shows:
 - **Summary:** how long the heating water heated the boiler, how long the electricity did, the electricity used in kWh, and, only if it happened, how long the boiler was heating the radiators.
 - **Boiler vs. supply graph:** boiler as the thick line, supply as the thin one; green area where the heating water was warmer than the boiler, red where the valve was open although it was colder.
 - **Hourly bars:** minutes per hour heated by the heating water (green) and by electricity (orange).
+
+**Two tariffs (optional).** Where the utility switches the boiler off during the peak tariff (in Slovakia and Czechia *vysoký / nízký tarif*, *VT / NT*, controlled by *HDO*), pick your tariff entity in the editor. The card then shows an off-peak/peak badge, explains that the element is switched off during the peak tariff, and marks the off-peak periods under the hourly bars. With a second, optional sensor that contains the time of the next change (a text such as "Vysoky Tarif do 16:55", or a timestamp), the badge and status also say until when. Leave it empty if you have a single rate; the card then looks as before.
 
 Move the mouse or a finger over the graph to read the values at that time. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant.
 
@@ -45,6 +48,8 @@ The card speaks **English, Slovak and Czech**, including the card editor. By def
 | Status: heating is warm | heating is warm — The supply is 9.0° warmer than the boiler, the valve could open | kúrenie je teplé — Prívod je o 9.0° teplejší ako bojler, ventil by mohol otvoriť | topení je teplé — Přívod je o 9.0° teplejší než bojler, ventil by mohl otevřít |
 | Status: electric heating | electric heating — Electricity is heating · the heating water is colder than the boiler | elektrický ohrev — Ohrieva elektrina · kúrenie je chladnejšie ako bojler | elektrický ohřev — Ohřívá elektřina · topení je chladnější než bojler |
 | Status: standby | standby — Valve closed · the supply is 5.0° colder than the boiler | pohotovosť — Ventil zatvorený · prívod je o 5.0° chladnejší ako bojler | pohotovost — Ventil zavřený · přívod je o 5.0° chladnější než bojler |
+| Status: peak tariff | peak tariff until 16:55 — Peak tariff: the electric element is switched off until 16:55 | vysoký tarif do 16:55 — Vysoký tarif: elektrická špirála je vypnutá do 16:55 | vysoký tarif do 16:55 — Vysoký tarif: elektrická spirála je vypnutá do 16:55 |
+| Tariff badge | off-peak · peak until 16:55 (off-peak tariff · peak tariff) | NT · VT do 16:55 (nízky tarif · vysoký tarif) | NT · VT do 16:55 (nízký tarif · vysoký tarif) |
 | Status: unavailable | unavailable — Temperature sensors are unavailable | nedostupné — Teplotné senzory sú nedostupné | nedostupné — Teplotní senzory jsou nedostupné |
 | History | HISTORY · now · heated by heating · electricity · electricity used · boiler heated radiators | HISTÓRIA · teraz · ohrev z kúrenia · elektrina · spotreba elektriny · bojler kúril radiátory | HISTORIE · teď · ohřev z topení · elektřina · spotřeba elektřiny · bojler topil radiátory |
 | Graph hover | heating 10 min · electricity 0 min | kúrenie 10 min · elektrina 0 min | topení 10 min · elektřina 0 min |
@@ -63,6 +68,8 @@ The card speaks **English, Slovak and Czech**, including the card editor. By def
 | `valve` | Valve | Ventil | Ventil |
 | `heater_power` | Current power of the electric element (W or kW sensor) | Aktuálny príkon špirály (senzor W alebo kW) | Aktuální příkon spirály (senzor W nebo kW) |
 | `heater` | Electric element (on/off) | Elektrická špirála (zap/vyp) | Elektrická spirála (zap/vyp) |
+| `tariff` | Tariff (off-peak / peak) | Tarif (nízky / vysoký) | Tarif (nízký / vysoký) |
+| `tariff_until` | Tariff change (sensor with the time) | Zmena tarifu (senzor s časom) | Změna tarifu (senzor s časem) |
 | *(section)* | History | História | Historie |
 | `show_graph` | Show history | Zobraziť históriu | Zobrazit historii |
 | `graph_hours` | Period | Obdobie | Období |
@@ -77,6 +84,7 @@ The card speaks **English, Slovak and Czech**, including the card editor. By def
 | `show_header` | Header | Hlavička | Hlavička |
 | `show_stats` | Values row | Riadok s hodnotami | Řádek s hodnotami |
 | `show_banner` | Status bar | Stavový pruh | Stavový pruh |
+| `tariff_low` | Tariff states that mean off-peak | Stavy tarifu, ktoré znamenajú nízky tarif | Stavy tarifu, které znamenají nízký tarif |
 | `label_supply` | Label: supply | Popis: prívod | Popisek: přívod |
 | `label_coil_in` | Label: into the boiler | Popis: do bojlera | Popisek: do bojleru |
 | `label_coil_out` | Label: return | Popis: spiatočka | Popisek: zpátečka |
@@ -118,6 +126,9 @@ heater_power: sensor.bojler_power              # electric element power in W
 | `heater_power` | — | Electric element power sensor (W) |
 | `heater` | — | Electric element on/off entity, if you have no power sensor |
 | `heater_on_w` | `50` | Power above which the element counts as heating |
+| `tariff` | — | Optional off-peak/peak entity (binary_sensor, sensor, select, schedule…); empty = single rate |
+| `tariff_low` | `on, nt, low, nízky, nizky, nízký, offpeak, off-peak` | States of `tariff` that mean off-peak (comma-separated, any case). If your HDO relay is **on during the peak tariff**, set `off` |
+| `tariff_until` | — | Optional sensor with the time of the next tariff change: any text containing a time (`Vysoky Tarif do 16:55`) or a timestamp |
 | `cold` / `hot` | `0` / `80` | Temperatures drawn fully blue / fully red |
 | `min_delta` | `3` | How much warmer (°C) the supply must be to count as useful |
 | `reverse_tol` | `0.5` | Tolerance (°C) before the "boiler heats radiators" alarm |

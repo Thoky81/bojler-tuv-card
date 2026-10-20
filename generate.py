@@ -29,6 +29,9 @@ CONFIG = {
     "heater": "",          # optional: switch/binary_sensor of the electric element
     "heater_power": "sensor.bojler_power",  # power sensor (W) of the electric element
     "heater_on_w": 50,     # W above which the element counts as heating
+    "tariff": "binary_sensor.d1_mini_v4_switchboard_hdo_tarif_relay",  # optional: low/high tariff (empty = single tariff)
+    "tariff_until": "sensor.power_tariff_times",  # optional: text/timestamp with the next tariff change
+    "tariff_low": "on, nt, low, nízky, nizky, nízký, offpeak, off-peak",  # its states meaning low tariff
     "label_supply": "",    # empty = default pipe labels in the card language
     "label_coil_in": "",
     "label_coil_out": "",
@@ -44,7 +47,9 @@ CONFIG = {
     "graph_hours": 24,
     "graph_smooth": 20,    # minutes of rolling mean for the graph lines (0 = raw)
 }
-VERSION = "1.3.0"
+VERSION = "1.4.0"
+# the author's own settings for the button-card YAML and the preview (not defaults of the HACS card)
+AUTHOR = {"tariff_low": "off"}  # this HDO relay is on during the high tariff
 # preview only: extra config for the simulated page
 PREVIEW_EXTRA = {}
 
@@ -59,11 +64,11 @@ def template(v, i18n=True):
     # the HACS card has i18n.js at top level (shared with the graph), the other outputs inline it
     return (I18N_JS + "\n" if i18n else "") + COMMON + "\n" + (SRC / f"variant-{v.lower()}.js").read_text()
 
-ENTITY_KEYS = ["boiler", "supply", "coil_in", "coil_out", "valve", "heater", "heater_power"]
+ENTITY_KEYS = ["boiler", "supply", "coil_in", "coil_out", "valve", "heater", "heater_power", "tariff", "tariff_until"]
 
 
 def yaml_card(v):
-    TEMPLATE = template(v).replace("/*CFG*/", json.dumps(CONFIG, ensure_ascii=False))
+    TEMPLATE = template(v).replace("/*CFG*/", json.dumps({**CONFIG, **AUTHOR}, ensure_ascii=False))
     triggers = "\n".join(f"- {CONFIG[k]}" for k in ENTITY_KEYS if CONFIG[k])
     body = "\n".join(("    " + l) if l.strip() else "" for l in ["[[[", *TEMPLATE.splitlines(), "]]]"])
     return f"""type: custom:button-card
@@ -98,7 +103,7 @@ def preview():
     fns = "\n".join(
         f"function render{v}(states, C) {{\n" + template(v).replace("const C = /*CFG*/;", "") + "\n}"
         for v in VARIANTS)
-    cfg = {**CONFIG, **PREVIEW_EXTRA}
+    cfg = {**CONFIG, **AUTHOR, **PREVIEW_EXTRA}
     head = '<!doctype html>\n<html lang="sk">\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
     return head + shell.replace("/*RENDER*/", fns).replace("/*CFG*/", json.dumps(cfg, ensure_ascii=False))
 

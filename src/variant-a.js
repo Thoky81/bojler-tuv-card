@@ -38,7 +38,8 @@ const svg = `
     <path d="M318 192 H246 a5 5 0 0 0 0 10 H318" style="fill:none;stroke:${heating ? WRN : SEC};stroke-opacity:${heating ? 1 : .45};stroke-width:3;stroke-linecap:round"/>
     <rect x="315" y="186" width="9" height="22" rx="2" style="fill:${SEC};fill-opacity:.5"/>
     ${hasHeater ? `<path d="M7,2V13H10V22L17,10H13L17,2H7Z" transform="translate(326 183) scale(.8)" style="fill:${heating ? WRN : SEC};fill-opacity:${heating ? 1 : .5}"/>` : ''}
-    ${pw !== null && heating ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${heating ? WRN : SEC}">${pwTxt}</text>` : ''}
+    ${pw !== null && heating ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${WRN}">${pwTxt}</text>`
+      : lowT === false ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${SEC}"><title>${T.vt_long}</title>${T.vt.toUpperCase()}</text>` : ''}
   </g>
 
   <!-- heating circuit -->
@@ -77,8 +78,9 @@ let cells = cell(T.boiler, f(tb), cB, C.boiler)
   + cell(T.s_coil, open ? sg(dCoil) : '—', dCol, C.coil_in,
     open ? `${lbl('coil_in').toLowerCase()} ${f(t2)} − ${lbl('coil_out').toLowerCase()} ${f(t3)}` : T.coil_only_open)
   + cell(vOk ? `${T.valve} · ${ago(vS.last_changed)}` : T.valve, vTxt, vCol, C.valve);
-if (pw !== null) cells += cell(T.s_el, pwTxt, heating ? WRN : SEC, C.heater_power, C.heater_power);
-else if (C.heater) cells += cell(T.s_el, heating ? T.el_on : T.el_off, heating ? WRN : SEC, C.heater);
+const elLbl = T.s_el + (lowT === null ? '' : ` · ${lowT ? T.nt : T.vt}`);
+if (pw !== null) cells += cell(elLbl, pwTxt, heating ? WRN : SEC, C.heater_power, C.heater_power);
+else if (C.heater) cells += cell(elLbl, heating ? T.el_on : T.el_off, heating ? WRN : SEC, C.heater);
 
 return wrap(`
   ${C.show_header !== false ? header() : ''}

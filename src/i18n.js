@@ -21,6 +21,8 @@ const I18N = {
     c_rev: 'bojler kúril radiátory', h_heat: 'kúrenie', h_el: 'elektrina', h_valve: 'ventil', h_element: 'špirála',
     loading: 'Načítavam históriu…', hist_err: 'História nie je dostupná: ',
     pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
+    until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízky tarif', vt_long: 'vysoký tarif',
+    blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická špirála je vypnutá',
   },
   cs: {
     title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
@@ -43,6 +45,8 @@ const I18N = {
     c_rev: 'bojler topil radiátory', h_heat: 'topení', h_el: 'elektřina', h_valve: 'ventil', h_element: 'spirála',
     loading: 'Načítám historii…', hist_err: 'Historie není dostupná: ',
     pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
+    until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízký tarif', vt_long: 'vysoký tarif',
+    blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická spirála je vypnutá',
   },
   en: {
     title: 'Boiler', BOILER: 'BOILER', boiler: 'boiler',
@@ -65,7 +69,15 @@ const I18N = {
     c_rev: 'boiler heated radiators', h_heat: 'heating', h_el: 'electricity', h_valve: 'valve', h_element: 'element',
     loading: 'Loading history…', hist_err: 'History is not available: ',
     pick: 'Pick the boiler temperature and the valve in the card editor.',
+    until: 'until', nt: 'off-peak', vt: 'peak', nt_long: 'off-peak tariff', vt_long: 'peak tariff',
+    blocked: 'peak tariff', blocked_txt: 'Peak tariff: the electric element is switched off',
   },
+};
+// optional tariff entity: true = low tariff, false = high tariff, null = no tariff / unknown.
+// tariff_low lists the states that mean low tariff (comma-separated, case-insensitive)
+const isLowTariff = (state, lowList) => {
+  if (state === undefined || state === null || ['unknown', 'unavailable', ''].includes(state)) return null;
+  return String(lowList || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean).includes(String(state).toLowerCase());
 };
 const i18nLang = (language, haLang) => {
   const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);

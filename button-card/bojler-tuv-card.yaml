@@ -10,6 +10,8 @@ triggers_update:
 - sensor.tuv_sensors_tuv_pipe_near_2
 - switch.tuv_bojler_valve
 - sensor.bojler_power
+- binary_sensor.d1_mini_v4_switchboard_hdo_tarif_relay
+- sensor.power_tariff_times
 tap_action:
   action: none
 hold_action:
@@ -50,6 +52,8 @@ custom_fields:
         c_rev: 'bojler kúril radiátory', h_heat: 'kúrenie', h_el: 'elektrina', h_valve: 'ventil', h_element: 'špirála',
         loading: 'Načítavam históriu…', hist_err: 'História nie je dostupná: ',
         pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
+        until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízky tarif', vt_long: 'vysoký tarif',
+        blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická špirála je vypnutá',
       },
       cs: {
         title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
@@ -72,6 +76,8 @@ custom_fields:
         c_rev: 'bojler topil radiátory', h_heat: 'topení', h_el: 'elektřina', h_valve: 'ventil', h_element: 'spirála',
         loading: 'Načítám historii…', hist_err: 'Historie není dostupná: ',
         pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
+        until: 'do', nt: 'NT', vt: 'VT', nt_long: 'nízký tarif', vt_long: 'vysoký tarif',
+        blocked: 'vysoký tarif', blocked_txt: 'Vysoký tarif: elektrická spirála je vypnutá',
       },
       en: {
         title: 'Boiler', BOILER: 'BOILER', boiler: 'boiler',
@@ -94,7 +100,15 @@ custom_fields:
         c_rev: 'boiler heated radiators', h_heat: 'heating', h_el: 'electricity', h_valve: 'valve', h_element: 'element',
         loading: 'Loading history…', hist_err: 'History is not available: ',
         pick: 'Pick the boiler temperature and the valve in the card editor.',
+        until: 'until', nt: 'off-peak', vt: 'peak', nt_long: 'off-peak tariff', vt_long: 'peak tariff',
+        blocked: 'peak tariff', blocked_txt: 'Peak tariff: the electric element is switched off',
       },
+    };
+    // optional tariff entity: true = low tariff, false = high tariff, null = no tariff / unknown.
+    // tariff_low lists the states that mean low tariff (comma-separated, case-insensitive)
+    const isLowTariff = (state, lowList) => {
+      if (state === undefined || state === null || ['unknown', 'unavailable', ''].includes(state)) return null;
+      return String(lowList || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean).includes(String(state).toLowerCase());
     };
     const i18nLang = (language, haLang) => {
       const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);
@@ -107,7 +121,7 @@ custom_fields:
       return v && !Object.values(I18N).some(t => t[key] === v) ? v : T[key];
     };
 
-    const C = {"title": "", "language": "auto", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "label_supply": "", "label_coil_in": "", "label_coil_out": "", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24, "graph_smooth": 20};
+    const C = {"title": "", "language": "auto", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "tariff": "binary_sensor.d1_mini_v4_switchboard_hdo_tarif_relay", "tariff_until": "sensor.power_tariff_times", "tariff_low": "off", "label_supply": "", "label_coil_in": "", "label_coil_out": "", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24, "graph_smooth": 20};
     const LANG = C.lang || i18nLang(C.language, typeof hass !== 'undefined' && hass ? hass.language : '');
     const T = I18N[LANG], CL = { ...C, lang: LANG };
     const lbl = k => i18nText(CL, k, 'label_' + k);
@@ -157,6 +171,17 @@ custom_fields:
     const pwTxt = pwRaw === null ? '' : `${pwUnit === 'W' ? Math.round(pwRaw) : +pwRaw.toFixed(2)} ${pwUnit}`;
     const hasHeater = !!(C.heater || C.heater_power);
     const heating = (C.heater && isOn(C.heater)) || (pw !== null && pw > C.heater_on_w);
+    const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
+    // optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
+    const tUntil = (() => {
+      const s = C.tariff_until && states[C.tariff_until];
+      if (!ok(s)) return '';
+      const m = String(s.state).match(/\b(\d{1,2}:\d{2})\b/);
+      if (m && !/^\d{4}-/.test(s.state)) return m[1];
+      const t = Date.parse(s.state);
+      return isFinite(t) ? new Date(t).toLocaleTimeString(LANG, { hour: '2-digit', minute: '2-digit', hour12: C.hour12 }) : '';
+    })();
+    const untilTxt = tUntil ? ` ${T.until} ${tUntil}` : '';
     const tin = t2 !== null ? t2 : t1;
     const dSup = t1 !== null && tb !== null ? t1 - tb : null;
     const dIn = tin !== null && tb !== null ? tin - tb : null;
@@ -170,12 +195,14 @@ custom_fields:
     else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
     else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
     else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+    else if (lowT === false) st = { k: 'blocked', c: SEC, icon: 'mdi:power-plug-off', label: T.blocked + untilTxt, txt: T.blocked_txt + untilTxt };
     else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
-    const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
+    const pill = (txt, c, tip = '') => `<span ${tip ? `title="${tip}"` : ''} style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
     let pills = '';
     if (!vOk) pills += pill(T.valve_unavailable, SEC);
     if (heating && st.k !== 'el') pills += pill(T.el_badge, WRN);
+    if (lowT !== null && st.k !== 'blocked') pills += pill((lowT ? T.nt : T.vt) + untilTxt, lowT ? INF : SEC, (lowT ? T.nt_long : T.vt_long) + untilTxt);
     pills += pill(st.label, st.c);
 
 
@@ -258,7 +285,8 @@ custom_fields:
         <path d="M318 192 H246 a5 5 0 0 0 0 10 H318" style="fill:none;stroke:${heating ? WRN : SEC};stroke-opacity:${heating ? 1 : .45};stroke-width:3;stroke-linecap:round"/>
         <rect x="315" y="186" width="9" height="22" rx="2" style="fill:${SEC};fill-opacity:.5"/>
         ${hasHeater ? `<path d="M7,2V13H10V22L17,10H13L17,2H7Z" transform="translate(326 183) scale(.8)" style="fill:${heating ? WRN : SEC};fill-opacity:${heating ? 1 : .5}"/>` : ''}
-        ${pw !== null && heating ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${heating ? WRN : SEC}">${pwTxt}</text>` : ''}
+        ${pw !== null && heating ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${WRN}">${pwTxt}</text>`
+          : lowT === false ? `<text x="338" y="215" text-anchor="middle" style="font-size:8.5px;font-weight:600;fill:${SEC}"><title>${T.vt_long}</title>${T.vt.toUpperCase()}</text>` : ''}
       </g>
 
       <!-- heating circuit -->
@@ -297,8 +325,9 @@ custom_fields:
       + cell(T.s_coil, open ? sg(dCoil) : '—', dCol, C.coil_in,
         open ? `${lbl('coil_in').toLowerCase()} ${f(t2)} − ${lbl('coil_out').toLowerCase()} ${f(t3)}` : T.coil_only_open)
       + cell(vOk ? `${T.valve} · ${ago(vS.last_changed)}` : T.valve, vTxt, vCol, C.valve);
-    if (pw !== null) cells += cell(T.s_el, pwTxt, heating ? WRN : SEC, C.heater_power, C.heater_power);
-    else if (C.heater) cells += cell(T.s_el, heating ? T.el_on : T.el_off, heating ? WRN : SEC, C.heater);
+    const elLbl = T.s_el + (lowT === null ? '' : ` · ${lowT ? T.nt : T.vt}`);
+    if (pw !== null) cells += cell(elLbl, pwTxt, heating ? WRN : SEC, C.heater_power, C.heater_power);
+    else if (C.heater) cells += cell(elLbl, heating ? T.el_on : T.el_off, heating ? WRN : SEC, C.heater);
 
     return wrap(`
       ${C.show_header !== false ? header() : ''}

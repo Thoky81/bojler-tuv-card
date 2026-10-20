@@ -3,7 +3,7 @@
 (() => {
 const VERSION = '/*VERSION*/';
 const DEFAULTS = /*DEFAULTS*/;
-const ENTITY_KEYS = ['boiler', 'supply', 'coil_in', 'coil_out', 'valve', 'heater', 'heater_power'];
+const ENTITY_KEYS = ['boiler', 'supply', 'coil_in', 'coil_out', 'valve', 'heater', 'heater_power', 'tariff', 'tariff_until'];
 
 /*I18N*/
 
@@ -139,6 +139,9 @@ const EDITOR = {
     graph_hours: 'Obdobie', graph_smooth: 'Vyhladenie čiar', show_header: 'Hlavička', show_stats: 'Riadok s hodnotami',
     show_banner: 'Stavový pruh', label_supply: 'Popis: prívod', label_coil_in: 'Popis: do bojlera', label_coil_out: 'Popis: spiatočka',
     empty_default: 'Prázdne = predvolený text v zvolenom jazyku',
+    tariff: 'Tarif (nízky / vysoký)', tariff_help: 'Nechaj prázdne, ak máš jednu sadzbu',
+    tariff_until: 'Zmena tarifu (senzor s časom)', tariff_until_help: 'Voliteľné: text s časom, napr. „Vysoký tarif do 16:55“, alebo časová značka',
+    tariff_low: 'Stavy tarifu, ktoré znamenajú nízky tarif', tariff_low_help: 'Oddelené čiarkou, napr. on, NT, low',
   },
   cs: {
     language: 'Jazyk', auto: 'Automaticky (podle Home Assistantu)', history: 'Historie', advanced: 'Rozšířené',
@@ -149,6 +152,9 @@ const EDITOR = {
     graph_hours: 'Období', graph_smooth: 'Vyhlazení čar', show_header: 'Hlavička', show_stats: 'Řádek s hodnotami',
     show_banner: 'Stavový pruh', label_supply: 'Popisek: přívod', label_coil_in: 'Popisek: do bojleru', label_coil_out: 'Popisek: zpátečka',
     empty_default: 'Prázdné = výchozí text ve zvoleném jazyce',
+    tariff: 'Tarif (nízký / vysoký)', tariff_help: 'Nechte prázdné, pokud máte jednu sazbu',
+    tariff_until: 'Změna tarifu (senzor s časem)', tariff_until_help: 'Volitelné: text s časem, např. „Vysoký tarif do 16:55“, nebo časová značka',
+    tariff_low: 'Stavy tarifu, které znamenají nízký tarif', tariff_low_help: 'Oddělené čárkou, např. on, NT, low',
   },
   en: {
     language: 'Language', auto: 'Auto (Home Assistant language)', history: 'History', advanced: 'Advanced',
@@ -159,6 +165,9 @@ const EDITOR = {
     graph_hours: 'Period', graph_smooth: 'Line smoothing', show_header: 'Header', show_stats: 'Values row',
     show_banner: 'Status bar', label_supply: 'Label: supply', label_coil_in: 'Label: into the boiler', label_coil_out: 'Label: return',
     empty_default: 'Empty = default text in the selected language',
+    tariff: 'Tariff (off-peak / peak)', tariff_help: 'Leave empty if you have a single rate',
+    tariff_until: 'Tariff change (sensor with the time)', tariff_until_help: 'Optional: text with a time, e.g. "Peak tariff until 16:55", or a timestamp',
+    tariff_low: 'Tariff states that mean off-peak', tariff_low_help: 'Comma-separated, e.g. on, NT, low',
   },
 };
 const TEXT_KEYS = { title: 'title', label_supply: 'supply', label_coil_in: 'coil_in', label_coil_out: 'coil_out' };
@@ -174,6 +183,8 @@ const schemaFor = E => [
   { name: 'valve', required: true, selector: { entity: { domain: ['switch', 'valve', 'binary_sensor', 'input_boolean'] } } },
   { name: 'heater_power', selector: { entity: { domain: 'sensor' } } },
   { name: 'heater', selector: { entity: { domain: ['switch', 'binary_sensor', 'input_boolean'] } } },
+  { name: 'tariff', selector: { entity: { domain: ['binary_sensor', 'sensor', 'input_boolean', 'input_select', 'select', 'schedule'] } } },
+  { name: 'tariff_until', selector: { entity: { domain: ['sensor', 'input_datetime'] } } },
   { name: 'history', type: 'expandable', flatten: true, title: E.history, schema: [
     { name: '', type: 'grid', schema: [
       { name: 'show_graph', selector: { boolean: {} } },
@@ -195,6 +206,7 @@ const schemaFor = E => [
       { name: 'show_stats', selector: { boolean: {} } },
       { name: 'show_banner', selector: { boolean: {} } },
     ] },
+    { name: 'tariff_low', selector: { text: {} } },
     { name: 'label_supply', selector: { text: {} } },
     { name: 'label_coil_in', selector: { text: {} } },
     { name: 'label_coil_out', selector: { text: {} } },
@@ -224,7 +236,7 @@ class BojlerTuvCardEditor extends HTMLElement {
       this.appendChild(this._form);
     }
     this._form.computeLabel = s => E[s.name] || s.name;
-    this._form.computeHelper = s => TEXT_KEYS[s.name] ? E.empty_default : undefined;
+    this._form.computeHelper = s => TEXT_KEYS[s.name] ? E.empty_default : E[s.name + '_help'];
     this._form.hass = this._hass;
     this._form.schema = schemaFor(E);
     this._form.data = { ...DEFAULTS, ...this._config };

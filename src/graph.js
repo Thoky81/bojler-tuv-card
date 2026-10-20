@@ -2,7 +2,7 @@
 // Perf: boiler, supply and power come from 5-minute statistics (288 points per sensor per day) instead of raw
 // history; raw history only for the valve/heater switch or sensors without statistics. After loading, new
 // points are appended from live state updates and the graph is redrawn at most once a minute.
-const G = { W: 400, PL: 34, PR: 394, PT: 6, PB: 100, BT: 114, BB: 150, H: 166 };
+const G = { W: 400, PL: 34, PR: 394, PT: 6, PB: 100, BT: 114, BB: 150, H: 170 };
 const ON_STATES = ['on', 'open', 'opening'];
 const bucketMs = cfg => Math.max(60e3, cfg.graph_hours * 3600e3 / 300);
 const barMs = cfg => Math.ceil(cfg.graph_hours / 48) * 3600e3;
@@ -13,7 +13,7 @@ const gTc = (t, cfg) => {
 };
 const numOf = s => { const v = s ? parseFloat(s) : NaN; return isFinite(v) ? v : null; };
 const wFactor = (hass, id) => ({ kW: 1e3, MW: 1e6 }[hass.states[id]?.attributes?.unit_of_measurement] || 1);
-const graphKey = cfg => JSON.stringify([cfg.graph_smooth, cfg.show_graph, cfg.graph_hours, cfg.boiler, cfg.supply, cfg.valve, cfg.heater, cfg.heater_power, cfg.heater_on_w]);
+const graphKey = cfg => JSON.stringify([cfg.tariff, cfg.tariff_low, cfg.graph_smooth, cfg.show_graph, cfg.graph_hours, cfg.boiler, cfg.supply, cfg.valve, cfg.heater, cfg.heater_power, cfg.heater_on_w]);
 const GSUC = 'var(--success-color, #43a047)', GERR = 'var(--error-color, #db4437)', GWRN = 'var(--warning-color, #ffa600)', GSEC = 'var(--secondary-text-color, #727272)';
 
 async function loadHistory(hass, cfg) {
@@ -24,7 +24,7 @@ async function loadHistory(hass, cfg) {
     stats = await hass.callWS({ type: 'recorder/statistics_during_period', start_time, statistic_ids: numIds, period: '5minute', types: ['mean'], units: { power: 'W' } });
   } catch (e) { stats = {}; }
   const hasStats = id => stats[id] && stats[id].length;
-  const histIds = [...new Set([cfg.valve, cfg.heater_power ? '' : cfg.heater, ...numIds.filter(id => !hasStats(id))].filter(Boolean))];
+  const histIds = [...new Set([cfg.valve, cfg.tariff, cfg.heater_power ? '' : cfg.heater, ...numIds.filter(id => !hasStats(id))].filter(Boolean))];
   const hist = histIds.length ? await hass.callWS({
     type: 'history/history_during_period', start_time, entity_ids: histIds,
     minimal_response: true, no_attributes: true, significant_changes_only: false,
@@ -52,6 +52,7 @@ async function loadHistory(hass, cfg) {
     t0, t1, power,
     series: { boiler: numeric(cfg.boiler), supply: numeric(cfg.supply) },
     valve: raw(cfg.valve).map(([t, s]) => [t, ON_STATES.includes(s)]),
+    tariff: cfg.tariff ? raw(cfg.tariff).map(([t, s]) => [t, isLowTariff(s, cfg.tariff_low)]) : null,
     heat: power ? power.map(([t, v]) => [t, v !== null && v > cfg.heater_on_w])
       : cfg.heater ? raw(cfg.heater).map(([t, s]) => [t, ON_STATES.includes(s)]) : null,
   };
@@ -69,13 +70,14 @@ function appendLive(d, hass, cfg) {
   if (cfg.supply) pushNum(d.series.supply, numOf(hass.states[cfg.supply]?.state));
   const vs = hass.states[cfg.valve]?.state;
   if (vs !== undefined) pushBool(d.valve, ON_STATES.includes(vs));
+  if (d.tariff && hass.states[cfg.tariff]) pushBool(d.tariff, isLowTariff(hass.states[cfg.tariff].state, cfg.tariff_low));
   if (d.power) {
     const w0 = numOf(hass.states[cfg.heater_power]?.state), w = w0 === null ? null : w0 * wFactor(hass, cfg.heater_power);
     pushNum(d.power, w);
     pushBool(d.heat, w !== null && w > cfg.heater_on_w);
   } else if (d.heat) pushBool(d.heat, ON_STATES.includes(hass.states[cfg.heater]?.state));
   d.t1 = now; d.t0 = now - cfg.graph_hours * 3600e3;
-  for (const arr of [d.series.boiler, d.series.supply, d.valve, d.heat || [], d.power || []]) while (arr.length > 1 && arr[1][0] < d.t0) arr.shift();
+  for (const arr of [d.series.boiler, d.series.supply, d.valve, d.heat || [], d.power || [], d.tariff || []]) while (arr.length > 1 && arr[1][0] < d.t0) arr.shift();
 }
 
 const valueAt = (arr, T) => {
@@ -139,10 +141,22 @@ function legendHtml(d, cfg, T, lang) {
   if (T != null) {
     const bm = barMs(cfg), a = Math.floor(T / bm) * bm, b = a + bm;
     out += `<span style="white-space:nowrap;color:${GSEC}">${L.h_heat} <b style="font-weight:600;color:${GSUC}">${Math.round(onTime(d, d.valve, a, b) / 60e3)} min</b>`
-      + (d.heat ? ` · ${L.h_el} <b style="font-weight:600;color:${GWRN}">${Math.round(onTime(d, d.heat, a, b) / 60e3)} min</b>` : '') + '</span>';
+      + (d.heat ? ` · ${L.h_el} <b style="font-weight:600;color:${GWRN}">${Math.round(onTime(d, d.heat, a, b) / 60e3)} min</b>` : '')
+      + (d.tariff && valueAt(d.tariff, T) !== null ? ` · ${valueAt(d.tariff, T) ? L.nt : L.vt}` : '') + '</span>';
   }
   return out;
 }
+
+// low-tariff periods as a thin strip just under the hourly bars
+const tariffStrip = (d, X, L) => {
+  let out = `<text x="${G.PL - 5}" y="${G.BB + 7}" text-anchor="end" style="font-size:7px;fill:${GSEC}">${L.nt}</text>`;
+  for (let i = 0; i < d.tariff.length; i++) {
+    if (d.tariff[i][1] !== true) continue;
+    const x0 = X(Math.max(d.tariff[i][0], d.t0)), x1 = X(i + 1 < d.tariff.length ? d.tariff[i + 1][0] : d.t1);
+    if (x1 > x0) out += `<rect x="${x0.toFixed(1)}" y="${G.BB + 2.5}" width="${(x1 - x0).toFixed(1)}" height="4" rx="1" style="fill:var(--info-color, #039be5);fill-opacity:.55"><title>${L.nt_long}</title></rect>`;
+  }
+  return out;
+};
 
 function renderGraph(d, cfg, lang) {
   const span = d.t1 - d.t0, gap = Math.max(3 * bucketMs(cfg), 20 * 60e3), hours = cfg.graph_hours;
@@ -234,6 +248,7 @@ function renderGraph(d, cfg, lang) {
       ${cfg.supply ? `<path d="${line(S)}" style="fill:none;stroke:url(#hgr);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"/>` : ''}
       <path d="${line(B)}" style="fill:none;stroke:url(#hgr);stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round"/>
       <line x1="${G.PL}" x2="${G.PR}" y1="${G.BB}" y2="${G.BB}" style="stroke:var(--divider-color)"/>
+      ${d.tariff ? tariffStrip(d, X, L) : ''}
       <line x1="${G.PL}" x2="${G.PR}" y1="${G.BT}" y2="${G.BT}" style="stroke:var(--divider-color);stroke-dasharray:2 3"/>
       <text x="${G.PL - 5}" y="${G.BT + 3}" text-anchor="end" style="font-size:8px;fill:${GSEC}">${bh === 1 ? '60 m' : bh + ' h'}</text>
       ${bars}
