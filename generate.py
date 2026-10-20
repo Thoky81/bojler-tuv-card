@@ -29,8 +29,8 @@ CONFIG = {
     "heater": "switch.bojler",  # optional: switch of the electric element (power icon on/off)
     "heater_power": "sensor.bojler_power",  # power sensor (W) of the electric element
     "heater_on_w": 50,     # W above which the element counts as heating
-    "tariff": "binary_sensor.d1_mini_v4_switchboard_hdo_tarif_relay",  # optional: low/high tariff (empty = single tariff)
-    "tariff_until": "sensor.power_tariff_times",  # optional: text/timestamp with the next tariff change
+    "tariff": "sensor.power_tariff_times",  # optional: low/high tariff (empty = single tariff); text like "Nizky Tarif do 18:35"
+    "tariff_until": "",    # optional: text/timestamp with the next tariff change (empty = taken from "tariff" if it has a time)
     "tariff_low": "on, nt, low, nízky, nizky, nízký, offpeak, off-peak",  # its states meaning low tariff
     "label_supply": "",    # empty = default pipe labels in the card language
     "label_coil_in": "",
@@ -49,9 +49,9 @@ CONFIG = {
     "graph_smooth": 20,    # minutes of rolling mean for the graph lines (0 = raw)
     "graph_power": False,  # element power as an area in the graph, with kWh per run
 }
-VERSION = "1.7.2"
+VERSION = "1.7.3"
 # the author's own settings for the button-card YAML and the preview (not defaults of the HACS card)
-AUTHOR = {"tariff_low": "off"}  # this HDO relay is on during the high tariff
+AUTHOR = {}
 # preview only: extra config for the simulated page
 PREVIEW_EXTRA = {}
 

@@ -51,9 +51,11 @@ const hasHeater = !!(C.heater || C.heater_power);
 const heating = pw !== null ? pw > C.heater_on_w : !!(C.heater && isOn(C.heater));
 const elOn = C.heater && ok(states[C.heater]) ? isOn(C.heater) : null;  // null = no switch configured
 const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
-// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
+// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp;
+// without one, the tariff entity itself is used when its state contains a time
 const tUntil = (() => {
-  const s = C.tariff_until && states[C.tariff_until];
+  const s = states[C.tariff_until || C.tariff];
+  if (!C.tariff_until && (!s || !/\d{1,2}:\d{2}/.test(s.state))) return '';
   if (!ok(s)) return '';
   const m = String(s.state).match(/\b(\d{1,2}:\d{2})\b/);
   if (m && !/^\d{4}-/.test(s.state)) return m[1];

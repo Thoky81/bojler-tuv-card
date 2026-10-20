@@ -80,10 +80,15 @@ const I18N = {
   },
 };
 // optional tariff entity: true = low tariff, false = high tariff, null = no tariff / unknown.
-// tariff_low lists the states that mean low tariff (comma-separated, case-insensitive)
+// tariff_low lists the states that mean low tariff (comma-separated). Matching ignores case and accents, and a
+// token also matches as a whole word of a longer text, so "Nizky Tarif do 18:35" counts as low via "nizky".
+const plainText = v => String(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 const isLowTariff = (state, lowList) => {
   if (state === undefined || state === null || ['unknown', 'unavailable', ''].includes(state)) return null;
-  return String(lowList || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean).includes(String(state).toLowerCase());
+  const st = plainText(state), words = st.split(/[^a-z0-9-]+/);
+  const exactOnly = ['on', 'off', 'true', 'false', '0', '1'];  // switch-like states never match inside a longer text
+  return String(lowList || '').split(',').map(plainText).filter(Boolean)
+    .some(tok => st === tok || (!exactOnly.includes(tok) && words.includes(tok)));
 };
 const i18nLang = (language, haLang) => {
   const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);

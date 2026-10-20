@@ -28,7 +28,7 @@ Below the drawing, a history section (last 24 hours by default) shows:
 - **Hourly bars:** minutes per hour heated by the heating water (green) and by electricity (orange).
 - **Element power (optional, `graph_power`):** the power sensor as a faint orange area in the lower part of the graph, each longer run labeled with the energy it used (e.g. *5.8 kWh*). Values are 5-minute averages, so a run of 2 minutes shows as a lower bump.
 
-**Two tariffs (optional).** Where the utility switches the boiler off during the peak tariff (in Slovakia and Czechia *vysoký / nízký tarif*, *VT / NT*, controlled by *HDO*), pick your tariff entity in the editor. The card then shows an off-peak/peak badge, explains that the element is switched off during the peak tariff, and marks the off-peak periods under the hourly bars. With a second, optional sensor that contains the time of the next change (a text such as "Vysoky Tarif do 16:55", or a timestamp), the badge and status also say until when. Leave it empty if you have a single rate; the card then looks as before.
+**Two tariffs (optional).** Where the utility switches the boiler off during the peak tariff (in Slovakia and Czechia *vysoký / nízký tarif*, *VT / NT*, controlled by *HDO*), pick your tariff entity in the editor. The card then shows an off-peak/peak badge, explains that the element is switched off during the peak tariff, and marks the off-peak periods under the hourly bars. The tariff entity can be a binary sensor or switch, or a text sensor such as *"Nizky Tarif do 18:35"*: the card recognises the off-peak words in it (ignoring case and accents) and, when the text contains a time, also shows until when. A separate sensor with the time of the next change (text or timestamp) can be set as well. Leave it empty if you have a single rate; the card then looks as before.
 
 **Landscape on wide dashboards.** When the card is wider than 720 px (for example a section spanning two columns), the history moves to the right of the drawing; on narrower cards and phones it stays below. Set `layout` to keep it always below (`stacked`) or always beside (`side`).
 
@@ -139,9 +139,9 @@ heater_power: sensor.bojler_power              # electric element power in W
 | `heater_power` | — | Electric element power sensor (W) |
 | `heater` | — | Optional switch of the electric element. A ⏻ icon by the element shows it: grey = off, green = on, orange = heating. Without a power sensor, `on` also counts as heating |
 | `heater_on_w` | `50` | Power above which the element counts as heating |
-| `tariff` | — | Optional off-peak/peak entity (binary_sensor, sensor, select, schedule…); empty = single rate |
-| `tariff_low` | `on, nt, low, nízky, nizky, nízký, offpeak, off-peak` | States of `tariff` that mean off-peak (comma-separated, any case). If your HDO relay is **on during the peak tariff**, set `off` |
-| `tariff_until` | — | Optional sensor with the time of the next tariff change: any text containing a time (`Vysoky Tarif do 16:55`) or a timestamp |
+| `tariff` | — | Optional off-peak/peak entity (binary_sensor, switch, select, schedule, or a text sensor like `Nizky Tarif do 18:35`); empty = single rate |
+| `tariff_low` | `on, nt, low, nízky, nizky, nízký, offpeak, off-peak` | States of `tariff` that mean off-peak (comma-separated; case and accents ignored; words also match inside a longer text, except `on`/`off`, which must be the whole state). If your HDO relay is **on during the peak tariff**, set `off` |
+| `tariff_until` | — | Optional sensor with the time of the next tariff change: any text containing a time (`Vysoky Tarif do 16:55`) or a timestamp. Empty = the time is taken from `tariff` if its state contains one |
 | `cold` / `hot` | `0` / `80` | Temperatures drawn fully blue / fully red |
 | `min_delta` | `3` | How much warmer (°C) the supply must be to count as useful |
 | `reverse_tol` | `0.5` | Tolerance (°C) before the "boiler heats radiators" alarm |

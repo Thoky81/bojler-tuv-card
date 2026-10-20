@@ -156,8 +156,8 @@ const EDITOR = {
     graph_power_help: 'Potrebuje senzor príkonu špirály', show_header: 'Hlavička', show_stats: 'Riadok s hodnotami',
     show_banner: 'Stavový pruh', label_supply: 'Popis: prívod', label_coil_in: 'Popis: do bojlera', label_coil_out: 'Popis: spiatočka',
     empty_default: 'Prázdne = predvolený text v zvolenom jazyku',
-    tariff: 'Tarif (nízky / vysoký)', tariff_help: 'Nechaj prázdne, ak máš jednu sadzbu',
-    tariff_until: 'Zmena tarifu (senzor s časom)', tariff_until_help: 'Voliteľné: text s časom, napr. „Vysoký tarif do 16:55“, alebo časová značka',
+    tariff: 'Tarif (nízky / vysoký)', tariff_help: 'Binárny senzor, prepínač alebo text ako „Nízky tarif do 22:00“. Prázdne = jedna sadzba',
+    tariff_until: 'Zmena tarifu (senzor s časom)', tariff_until_help: 'Voliteľné: text s časom, napr. „Vysoký tarif do 16:55“, alebo časová značka. Prázdne = čas z entity tarifu',
     tariff_low: 'Stavy tarifu, ktoré znamenajú nízky tarif', tariff_low_help: 'Oddelené čiarkou, napr. on, NT, low',
   },
   cs: {
@@ -172,8 +172,8 @@ const EDITOR = {
     graph_power_help: 'Potřebuje senzor příkonu spirály', show_header: 'Hlavička', show_stats: 'Řádek s hodnotami',
     show_banner: 'Stavový pruh', label_supply: 'Popisek: přívod', label_coil_in: 'Popisek: do bojleru', label_coil_out: 'Popisek: zpátečka',
     empty_default: 'Prázdné = výchozí text ve zvoleném jazyce',
-    tariff: 'Tarif (nízký / vysoký)', tariff_help: 'Nechte prázdné, pokud máte jednu sazbu',
-    tariff_until: 'Změna tarifu (senzor s časem)', tariff_until_help: 'Volitelné: text s časem, např. „Vysoký tarif do 16:55“, nebo časová značka',
+    tariff: 'Tarif (nízký / vysoký)', tariff_help: 'Binární senzor, přepínač nebo text jako „Nízký tarif do 22:00“. Prázdné = jedna sazba',
+    tariff_until: 'Změna tarifu (senzor s časem)', tariff_until_help: 'Volitelné: text s časem, např. „Vysoký tarif do 16:55“, nebo časová značka. Prázdné = čas z entity tarifu',
     tariff_low: 'Stavy tarifu, které znamenají nízký tarif', tariff_low_help: 'Oddělené čárkou, např. on, NT, low',
   },
   en: {
@@ -188,8 +188,8 @@ const EDITOR = {
     graph_power_help: 'Needs the element power sensor', show_header: 'Header', show_stats: 'Values row',
     show_banner: 'Status bar', label_supply: 'Label: supply', label_coil_in: 'Label: into the boiler', label_coil_out: 'Label: return',
     empty_default: 'Empty = default text in the selected language',
-    tariff: 'Tariff (off-peak / peak)', tariff_help: 'Leave empty if you have a single rate',
-    tariff_until: 'Tariff change (sensor with the time)', tariff_until_help: 'Optional: text with a time, e.g. "Peak tariff until 16:55", or a timestamp',
+    tariff: 'Tariff (off-peak / peak)', tariff_help: 'Binary sensor, switch or a text like "Off-peak until 22:00". Empty = single rate',
+    tariff_until: 'Tariff change (sensor with the time)', tariff_until_help: 'Optional: text with a time, e.g. "Peak tariff until 16:55", or a timestamp. Empty = time from the tariff entity',
     tariff_low: 'Tariff states that mean off-peak', tariff_low_help: 'Comma-separated, e.g. on, NT, low',
   },
 };

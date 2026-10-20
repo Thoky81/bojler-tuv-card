@@ -123,7 +123,7 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-const PREVIEW_CFG = {"title": "", "language": "auto", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "switch.bojler", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "tariff": "binary_sensor.d1_mini_v4_switchboard_hdo_tarif_relay", "tariff_until": "sensor.power_tariff_times", "tariff_low": "off", "label_supply": "", "label_coil_in": "", "label_coil_out": "", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "layout": "auto", "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24, "graph_smooth": 20, "graph_power": false};
+const PREVIEW_CFG = {"title": "", "language": "auto", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "switch.bojler", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "tariff": "sensor.power_tariff_times", "tariff_until": "", "tariff_low": "on, nt, low, nízky, nizky, nízký, offpeak, off-peak", "label_supply": "", "label_coil_in": "", "label_coil_out": "", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "layout": "auto", "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24, "graph_smooth": 20, "graph_power": false};
 function renderA(states, C) {
 // ---------- translations (language: auto = Home Assistant's language, sk, cs, en) ----------
 const I18N = {
@@ -207,10 +207,15 @@ const I18N = {
   },
 };
 // optional tariff entity: true = low tariff, false = high tariff, null = no tariff / unknown.
-// tariff_low lists the states that mean low tariff (comma-separated, case-insensitive)
+// tariff_low lists the states that mean low tariff (comma-separated). Matching ignores case and accents, and a
+// token also matches as a whole word of a longer text, so "Nizky Tarif do 18:35" counts as low via "nizky".
+const plainText = v => String(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 const isLowTariff = (state, lowList) => {
   if (state === undefined || state === null || ['unknown', 'unavailable', ''].includes(state)) return null;
-  return String(lowList || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean).includes(String(state).toLowerCase());
+  const st = plainText(state), words = st.split(/[^a-z0-9-]+/);
+  const exactOnly = ['on', 'off', 'true', 'false', '0', '1'];  // switch-like states never match inside a longer text
+  return String(lowList || '').split(',').map(plainText).filter(Boolean)
+    .some(tok => st === tok || (!exactOnly.includes(tok) && words.includes(tok)));
 };
 const i18nLang = (language, haLang) => {
   const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);
@@ -276,9 +281,11 @@ const hasHeater = !!(C.heater || C.heater_power);
 const heating = pw !== null ? pw > C.heater_on_w : !!(C.heater && isOn(C.heater));
 const elOn = C.heater && ok(states[C.heater]) ? isOn(C.heater) : null;  // null = no switch configured
 const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
-// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
+// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp;
+// without one, the tariff entity itself is used when its state contains a time
 const tUntil = (() => {
-  const s = C.tariff_until && states[C.tariff_until];
+  const s = states[C.tariff_until || C.tariff];
+  if (!C.tariff_until && (!s || !/\d{1,2}:\d{2}/.test(s.state))) return '';
   if (!ok(s)) return '';
   const m = String(s.state).match(/\b(\d{1,2}:\d{2})\b/);
   if (m && !/^\d{4}-/.test(s.state)) return m[1];
@@ -542,10 +549,15 @@ const I18N = {
   },
 };
 // optional tariff entity: true = low tariff, false = high tariff, null = no tariff / unknown.
-// tariff_low lists the states that mean low tariff (comma-separated, case-insensitive)
+// tariff_low lists the states that mean low tariff (comma-separated). Matching ignores case and accents, and a
+// token also matches as a whole word of a longer text, so "Nizky Tarif do 18:35" counts as low via "nizky".
+const plainText = v => String(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 const isLowTariff = (state, lowList) => {
   if (state === undefined || state === null || ['unknown', 'unavailable', ''].includes(state)) return null;
-  return String(lowList || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean).includes(String(state).toLowerCase());
+  const st = plainText(state), words = st.split(/[^a-z0-9-]+/);
+  const exactOnly = ['on', 'off', 'true', 'false', '0', '1'];  // switch-like states never match inside a longer text
+  return String(lowList || '').split(',').map(plainText).filter(Boolean)
+    .some(tok => st === tok || (!exactOnly.includes(tok) && words.includes(tok)));
 };
 const i18nLang = (language, haLang) => {
   const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);
@@ -611,9 +623,11 @@ const hasHeater = !!(C.heater || C.heater_power);
 const heating = pw !== null ? pw > C.heater_on_w : !!(C.heater && isOn(C.heater));
 const elOn = C.heater && ok(states[C.heater]) ? isOn(C.heater) : null;  // null = no switch configured
 const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
-// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
+// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp;
+// without one, the tariff entity itself is used when its state contains a time
 const tUntil = (() => {
-  const s = C.tariff_until && states[C.tariff_until];
+  const s = states[C.tariff_until || C.tariff];
+  if (!C.tariff_until && (!s || !/\d{1,2}:\d{2}/.test(s.state))) return '';
   if (!ok(s)) return '';
   const m = String(s.state).match(/\b(\d{1,2}:\d{2})\b/);
   if (m && !/^\d{4}-/.test(s.state)) return m[1];
@@ -833,10 +847,15 @@ const I18N = {
   },
 };
 // optional tariff entity: true = low tariff, false = high tariff, null = no tariff / unknown.
-// tariff_low lists the states that mean low tariff (comma-separated, case-insensitive)
+// tariff_low lists the states that mean low tariff (comma-separated). Matching ignores case and accents, and a
+// token also matches as a whole word of a longer text, so "Nizky Tarif do 18:35" counts as low via "nizky".
+const plainText = v => String(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 const isLowTariff = (state, lowList) => {
   if (state === undefined || state === null || ['unknown', 'unavailable', ''].includes(state)) return null;
-  return String(lowList || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean).includes(String(state).toLowerCase());
+  const st = plainText(state), words = st.split(/[^a-z0-9-]+/);
+  const exactOnly = ['on', 'off', 'true', 'false', '0', '1'];  // switch-like states never match inside a longer text
+  return String(lowList || '').split(',').map(plainText).filter(Boolean)
+    .some(tok => st === tok || (!exactOnly.includes(tok) && words.includes(tok)));
 };
 const i18nLang = (language, haLang) => {
   const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);
@@ -902,9 +921,11 @@ const hasHeater = !!(C.heater || C.heater_power);
 const heating = pw !== null ? pw > C.heater_on_w : !!(C.heater && isOn(C.heater));
 const elOn = C.heater && ok(states[C.heater]) ? isOn(C.heater) : null;  // null = no switch configured
 const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
-// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
+// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp;
+// without one, the tariff entity itself is used when its state contains a time
 const tUntil = (() => {
-  const s = C.tariff_until && states[C.tariff_until];
+  const s = states[C.tariff_until || C.tariff];
+  if (!C.tariff_until && (!s || !/\d{1,2}:\d{2}/.test(s.state))) return '';
   if (!ok(s)) return '';
   const m = String(s.state).match(/\b(\d{1,2}:\d{2})\b/);
   if (m && !/^\d{4}-/.test(s.state)) return m[1];
@@ -1141,10 +1162,15 @@ const I18N = {
   },
 };
 // optional tariff entity: true = low tariff, false = high tariff, null = no tariff / unknown.
-// tariff_low lists the states that mean low tariff (comma-separated, case-insensitive)
+// tariff_low lists the states that mean low tariff (comma-separated). Matching ignores case and accents, and a
+// token also matches as a whole word of a longer text, so "Nizky Tarif do 18:35" counts as low via "nizky".
+const plainText = v => String(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 const isLowTariff = (state, lowList) => {
   if (state === undefined || state === null || ['unknown', 'unavailable', ''].includes(state)) return null;
-  return String(lowList || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean).includes(String(state).toLowerCase());
+  const st = plainText(state), words = st.split(/[^a-z0-9-]+/);
+  const exactOnly = ['on', 'off', 'true', 'false', '0', '1'];  // switch-like states never match inside a longer text
+  return String(lowList || '').split(',').map(plainText).filter(Boolean)
+    .some(tok => st === tok || (!exactOnly.includes(tok) && words.includes(tok)));
 };
 const i18nLang = (language, haLang) => {
   const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);
@@ -1210,9 +1236,11 @@ const hasHeater = !!(C.heater || C.heater_power);
 const heating = pw !== null ? pw > C.heater_on_w : !!(C.heater && isOn(C.heater));
 const elOn = C.heater && ok(states[C.heater]) ? isOn(C.heater) : null;  // null = no switch configured
 const lowT = C.tariff ? isLowTariff(states[C.tariff]?.state, C.tariff_low) : null;  // null = single tariff / unknown
-// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp
+// optional sensor telling when the tariff changes: any text with a time ("Vysoky Tarif do 16:55") or a timestamp;
+// without one, the tariff entity itself is used when its state contains a time
 const tUntil = (() => {
-  const s = C.tariff_until && states[C.tariff_until];
+  const s = states[C.tariff_until || C.tariff];
+  if (!C.tariff_until && (!s || !/\d{1,2}:\d{2}/.test(s.state))) return '';
   if (!ok(s)) return '';
   const m = String(s.state).match(/\b(\d{1,2}:\d{2})\b/);
   if (m && !/^\d{4}-/.test(s.state)) return m[1];
