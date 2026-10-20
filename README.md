@@ -19,7 +19,7 @@ It also tells you what is going on:
 Below the drawing, a history section (last 24 hours by default) shows:
 
 - **Summary:** how long the heating water heated the boiler, how long the electricity did, the electricity used in kWh, and, only if it happened, how long the boiler was heating the radiators.
-- **Boiler vs. supply graph:** green area where the heating water was warmer than the boiler, red where the valve was open although it was colder.
+- **Boiler vs. supply graph:** boiler as the thick line, supply as the thin one; green area where the heating water was warmer than the boiler, red where the valve was open although it was colder.
 - **Hourly bars:** minutes per hour heated by the heating water (green) and by electricity (orange).
 
 Move the mouse or a finger over the graph to read the values at that time. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant. The labels are in Slovak, and you can rename the pipe labels in the editor.
@@ -67,6 +67,7 @@ heater_power: sensor.bojler_power              # electric element power in W
 | `show_header` / `show_stats` / `show_banner` | `true` | Show the header, the values row and the status bar |
 | `show_graph` | `true` | Show the history section |
 | `graph_hours` | `24` | Hours of history (1–168) |
+| `graph_smooth` | `20` | Minutes of rolling average for the graph lines, so a cycling heat source doesn't zigzag (`0` = raw readings) |
 | `label_supply` / `label_coil_in` / `label_coil_out` | `PRÍVOD` / `DO BOJLERA` / `SPIATOČKA` | Pipe labels |
 
 ## Performance

@@ -12,7 +12,7 @@ const gTc = (t, cfg) => {
   return `hsl(${Math.round(215 - 215 * k)},78%,${Math.round(50 - 7 * Math.sin(Math.PI * k))}%)`;
 };
 const numOf = s => { const v = s ? parseFloat(s) : NaN; return isFinite(v) ? v : null; };
-const graphKey = cfg => JSON.stringify([cfg.show_graph, cfg.graph_hours, cfg.boiler, cfg.supply, cfg.valve, cfg.heater, cfg.heater_power, cfg.heater_on_w]);
+const graphKey = cfg => JSON.stringify([cfg.graph_smooth, cfg.show_graph, cfg.graph_hours, cfg.boiler, cfg.supply, cfg.valve, cfg.heater, cfg.heater_power, cfg.heater_on_w]);
 const GSUC = 'var(--success-color, #43a047)', GERR = 'var(--error-color, #db4437)', GWRN = 'var(--warning-color, #ffa600)', GSEC = 'var(--secondary-text-color, #727272)';
 
 async function loadHistory(hass, cfg) {
@@ -110,6 +110,18 @@ const reverseTime = (d, cfg) => {
   }
   return m;
 };
+// rolling mean over `win` ms for display; never averages across a gap, so missing data stays missing
+const smooth = (arr, win, gap) => {
+  if (!(win > 0)) return arr;
+  const h = win / 2;
+  return arr.map(([t, v], i) => {
+    if (v === null) return [t, null];
+    let s = v, n = 1;
+    for (let j = i - 1; j >= 0 && arr[j][1] !== null && t - arr[j][0] <= h && arr[j + 1][0] - arr[j][0] <= gap; j--) { s += arr[j][1]; n++; }
+    for (let j = i + 1; j < arr.length && arr[j][1] !== null && arr[j][0] - t <= h && arr[j][0] - arr[j - 1][0] <= gap; j++) { s += arr[j][1]; n++; }
+    return [t, s / n];
+  });
+};
 const fmtTime = (t, lang, withDate) => new Date(t).toLocaleString(lang, withDate
   ? { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
 const fmtDur = ms => { const m = Math.round(ms / 60e3); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
@@ -121,7 +133,7 @@ function legendHtml(d, cfg, T, lang) {
   const at = T ?? d.t1;
   let out = `<span style="color:${GSEC};font-variant-numeric:tabular-nums;white-space:nowrap">${T == null ? 'teraz' : fmtTime(T, lang, cfg.graph_hours > 24)}</span>`;
   out += item('bojler', valueAt(d.series.boiler, at), 'none', 2.6);
-  if (cfg.supply) out += item(String(cfg.label_supply).toLowerCase(), valueAt(d.series.supply, at), '4 2.5', 1.6);
+  if (cfg.supply) out += item(String(cfg.label_supply).toLowerCase(), valueAt(d.series.supply, at), 'none', 1.6);
   if (T != null) {
     const bm = barMs(cfg), a = Math.floor(T / bm) * bm, b = a + bm;
     out += `<span style="white-space:nowrap;color:${GSEC}">kúrenie <b style="font-weight:600;color:${GSUC}">${Math.round(onTime(d, d.valve, a, b) / 60e3)} min</b>`
@@ -133,7 +145,8 @@ function legendHtml(d, cfg, T, lang) {
 function renderGraph(d, cfg, lang) {
   const span = d.t1 - d.t0, gap = Math.max(3 * bucketMs(cfg), 20 * 60e3), hours = cfg.graph_hours;
   const X = t => G.PL + (t - d.t0) / span * (G.PR - G.PL);
-  const B = d.series.boiler, S = d.series.supply;
+  const win = (cfg.graph_smooth || 0) * 60e3;
+  const B = smooth(d.series.boiler, win, gap), S = smooth(d.series.supply, win, gap);
   let lo = Infinity, hi = -Infinity;
   for (const a of [B, S]) for (const [, v] of a) if (v !== null) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
   if (!isFinite(lo)) { lo = cfg.cold; hi = cfg.hot; }
@@ -215,7 +228,7 @@ function renderGraph(d, cfg, lang) {
       <defs><linearGradient id="hgr" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${Y(hi)}" y2="${Y(lo)}">${stops}</linearGradient></defs>
       ${grid}
       ${areas}
-      ${cfg.supply ? `<path d="${line(S)}" style="fill:none;stroke:url(#hgr);stroke-width:1.6;stroke-dasharray:4 2.5;stroke-linecap:round"/>` : ''}
+      ${cfg.supply ? `<path d="${line(S)}" style="fill:none;stroke:url(#hgr);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"/>` : ''}
       <path d="${line(B)}" style="fill:none;stroke:url(#hgr);stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round"/>
       <line x1="${G.PL}" x2="${G.PR}" y1="${G.BB}" y2="${G.BB}" style="stroke:var(--divider-color)"/>
       <line x1="${G.PL}" x2="${G.PR}" y1="${G.BT}" y2="${G.BT}" style="stroke:var(--divider-color);stroke-dasharray:2 3"/>

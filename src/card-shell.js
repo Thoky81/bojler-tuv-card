@@ -135,6 +135,7 @@ const SCHEMA = [
     { name: '', type: 'grid', schema: [
       { name: 'show_graph', selector: { boolean: {} } },
       { name: 'graph_hours', selector: { number: { min: 1, max: 168, mode: 'box', unit_of_measurement: 'h' } } },
+      { name: 'graph_smooth', selector: { number: { min: 0, max: 120, step: 5, mode: 'box', unit_of_measurement: 'min' } } },
     ] },
   ] },
   { name: 'advanced', type: 'expandable', flatten: true, title: 'Rozšírené', schema: [
@@ -173,6 +174,7 @@ const LABELS = {
   animate: 'Animácia toku',
   show_graph: 'Zobraziť históriu',
   graph_hours: 'Obdobie',
+  graph_smooth: 'Vyhladenie čiar',
   show_header: 'Hlavička',
   show_stats: 'Riadok s hodnotami',
   show_banner: 'Stavový pruh',
