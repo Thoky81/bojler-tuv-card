@@ -43,7 +43,7 @@ CONFIG = {
     "graph_hours": 24,
     "graph_smooth": 20,    # minutes of rolling mean for the graph lines (0 = raw)
 }
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 # preview only: extra config for the simulated page
 PREVIEW_EXTRA = {}
 

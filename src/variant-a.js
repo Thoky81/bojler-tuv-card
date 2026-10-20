@@ -62,18 +62,20 @@ const svg = `
   ${tBadge(52, SY, t1, C.supply, C.label_supply, 105)}
   ${tBadge(TX, SY, t2, C.coil_in, C.label_coil_in, 105)}
   ${tBadge(TX, RY, t3, C.coil_out, C.label_coil_out, 193)}
-  <text x="${TX}" y="149" text-anchor="middle" style="font-size:10px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums">Δ ${sg(dCoil)}</text>
+  ${open ? `<text x="${TX}" y="149" text-anchor="middle" style="font-size:10px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums"><title>${C.label_coil_in.toLowerCase()} ${f(t2)} − ${C.label_coil_out.toLowerCase()} ${f(t3)}</title>Δ ${sg(dCoil)}</text>` : ''}
 </svg>`;
 
 // ---------- stats ----------
-const cell = (label, val, col, id) => `
-  <div ${mi(id)} style="min-width:0">
+const cell = (label, val, col, id, tip = '') => `
+  <div ${mi(id)} ${tip ? `title="${tip}"` : ''} style="min-width:0">
     <div style="font-size:11px;color:${SEC};white-space:nowrap">${label}</div>
     <div style="font-size:15px;font-weight:500;color:${col};white-space:nowrap;font-variant-numeric:tabular-nums">${val}</div>
   </div>`;
 let cells = cell('bojler', f(tb), cB, C.boiler)
-  + cell('prívod − bojler', sg(dSup), supCol, C.supply)
-  + cell('výmenník Δ', sg(dCoil), dCol, C.coil_in)
+  + cell('prívod − bojler', sg(dSup), supCol, C.supply, `${C.label_supply.toLowerCase()} ${f(t1)} − bojler ${f(tb)}`)
+  // with the valve closed the water in the coil stands still, so in − out says nothing
+  + cell('výmenník Δ', open ? sg(dCoil) : '—', dCol, C.coil_in,
+    open ? `${C.label_coil_in.toLowerCase()} ${f(t2)} − ${C.label_coil_out.toLowerCase()} ${f(t3)}` : 'len pri otvorenom ventile')
   + cell(vOk ? `ventil · ${ago(vS.last_changed)}` : 'ventil', vTxt, vCol, C.valve);
 if (pw !== null) cells += cell('elektrina', pw >= 1000 ? (pw / 1000).toFixed(2) + ' kW' : Math.round(pw) + ' W', heating ? WRN : SEC, C.heater_power);
 else if (C.heater) cells += cell('elektrina', heating ? 'zapnutá' : 'vypnutá', heating ? WRN : SEC, C.heater);

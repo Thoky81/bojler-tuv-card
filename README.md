@@ -22,6 +22,8 @@ Below the drawing, a history section (last 24 hours by default) shows:
 - **Boiler vs. supply graph:** boiler as the thick line, supply as the thin one; green area where the heating water was warmer than the boiler, red where the valve was open although it was colder.
 - **Hourly bars:** minutes per hour heated by the heating water (green) and by electricity (orange).
 
+The values row under the drawing shows **prívod − bojler** (supply minus boiler: positive means the heating water is warmer and worth using) and **výmenník Δ** (into the coil minus out of it: how much the water cooled in the boiler, shown only while the valve is open). Hover a value to see the calculation.
+
 Move the mouse or a finger over the graph to read the values at that time. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant. The labels are in Slovak, and you can rename the pipe labels in the editor.
 
 ## Install with HACS
