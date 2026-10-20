@@ -123,7 +123,7 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-const PREVIEW_CFG = {"title": "", "language": "auto", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "tariff": "binary_sensor.d1_mini_v4_switchboard_hdo_tarif_relay", "tariff_until": "sensor.power_tariff_times", "tariff_low": "off", "label_supply": "", "label_coil_in": "", "label_coil_out": "", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24, "graph_smooth": 20};
+const PREVIEW_CFG = {"title": "", "language": "auto", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "tariff": "binary_sensor.d1_mini_v4_switchboard_hdo_tarif_relay", "tariff_until": "sensor.power_tariff_times", "tariff_low": "off", "label_supply": "", "label_coil_in": "", "label_coil_out": "", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24, "graph_smooth": 20, "graph_power": false};
 function renderA(states, C) {
 // ---------- translations (language: auto = Home Assistant's language, sk, cs, en) ----------
 const I18N = {

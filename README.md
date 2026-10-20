@@ -24,6 +24,7 @@ Below the drawing, a history section (last 24 hours by default) shows:
 - **Summary:** how long the heating water heated the boiler, how long the electricity did, the electricity used in kWh, and, only if it happened, how long the boiler was heating the radiators.
 - **Boiler vs. supply graph:** boiler as the thick line, supply as the thin one; green area where the heating water was warmer than the boiler, red where the valve was open although it was colder.
 - **Hourly bars:** minutes per hour heated by the heating water (green) and by electricity (orange).
+- **Element power (optional, `graph_power`):** the power sensor as a faint orange area in the lower part of the graph, each longer run labeled with the energy it used (e.g. *5.8 kWh*). Values are 5-minute averages, so a run of 2 minutes shows as a lower bump.
 
 **Two tariffs (optional).** Where the utility switches the boiler off during the peak tariff (in Slovakia and Czechia *vysoký / nízký tarif*, *VT / NT*, controlled by *HDO*), pick your tariff entity in the editor. The card then shows an off-peak/peak badge, explains that the element is switched off during the peak tariff, and marks the off-peak periods under the hourly bars. With a second, optional sensor that contains the time of the next change (a text such as "Vysoky Tarif do 16:55", or a timestamp), the badge and status also say until when. Leave it empty if you have a single rate; the card then looks as before.
 
@@ -74,6 +75,7 @@ The card speaks **English, Slovak and Czech**, including the card editor. By def
 | `show_graph` | Show history | Zobraziť históriu | Zobrazit historii |
 | `graph_hours` | Period | Obdobie | Období |
 | `graph_smooth` | Line smoothing | Vyhladenie čiar | Vyhlazení čar |
+| `graph_power` | Element power in the graph | Príkon špirály v grafe | Příkon spirály v grafu |
 | *(section)* | Advanced | Rozšírené | Rozšířené |
 | `cold` | Blue at | Modrá pri | Modrá při |
 | `hot` | Red at | Červená pri | Červená při |
@@ -136,6 +138,7 @@ heater_power: sensor.bojler_power              # electric element power in W
 | `show_header` / `show_stats` / `show_banner` | `true` | Show the header, the values row and the status bar |
 | `show_graph` | `true` | Show the history section |
 | `graph_hours` | `24` | Hours of history (1–168) |
+| `graph_power` | `false` | Show the element power in the graph, with kWh per run (needs `heater_power`) |
 | `graph_smooth` | `20` | Minutes of rolling average for the graph lines, so a cycling heat source doesn't zigzag (`0` = raw readings) |
 | `label_supply` / `label_coil_in` / `label_coil_out` | language default | Pipe labels; empty = *SUPPLY / TO BOILER / RETURN* (en), *PRÍVOD / DO BOJLERA / SPIATOČKA* (sk), *PŘÍVOD / DO BOJLERU / ZPÁTEČKA* (cs) |
 

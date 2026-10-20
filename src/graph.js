@@ -138,6 +138,7 @@ function legendHtml(d, cfg, T, lang) {
   let out = `<span style="color:${GSEC};font-variant-numeric:tabular-nums;white-space:nowrap">${T == null ? L.hist_now : fmtTime(T, lang, cfg.graph_hours > 24, cfg.hour12)}</span>`;
   out += item(L.boiler, valueAt(d.series.boiler, at), 'none', 2.6);
   if (cfg.supply) out += item(i18nText(cfg, 'supply', 'label_supply').toLowerCase(), valueAt(d.series.supply, at), 'none', 1.6);
+  if (cfg.graph_power && d.power) out += `<span style="white-space:nowrap;color:${GSEC}">⚡ <b style="font-weight:600;color:${GWRN};font-variant-numeric:tabular-nums">${fmtPow(valueAt(d.power, at), cfg.power_unit)}</b></span>`;
   if (T != null) {
     const bm = barMs(cfg), a = Math.floor(T / bm) * bm, b = a + bm;
     out += `<span style="white-space:nowrap;color:${GSEC}">${L.h_heat} <b style="font-weight:600;color:${GSUC}">${Math.round(onTime(d, d.valve, a, b) / 60e3)} min</b>`
@@ -148,15 +149,49 @@ function legendHtml(d, cfg, T, lang) {
 }
 
 // low-tariff periods as a thin strip just under the hourly bars
-const tariffStrip = (d, X, L) => {
-  let out = `<text x="${G.PL - 5}" y="${G.BB + 7}" text-anchor="end" style="font-size:7px;fill:${GSEC}">${L.nt}</text>`;
+const tariffStrip = (d, X, L, BB) => {
+  let out = `<text x="${G.PL - 5}" y="${BB + 7}" text-anchor="end" style="font-size:7px;fill:${GSEC}">${L.nt}</text>`;
   for (let i = 0; i < d.tariff.length; i++) {
     if (d.tariff[i][1] !== true) continue;
     const x0 = X(Math.max(d.tariff[i][0], d.t0)), x1 = X(i + 1 < d.tariff.length ? d.tariff[i + 1][0] : d.t1);
-    if (x1 > x0) out += `<rect x="${x0.toFixed(1)}" y="${G.BB + 2.5}" width="${(x1 - x0).toFixed(1)}" height="4" rx="1" style="fill:var(--info-color, #039be5);fill-opacity:.55"><title>${L.nt_long}</title></rect>`;
+    if (x1 > x0) out += `<rect x="${x0.toFixed(1)}" y="${BB + 2.5}" width="${(x1 - x0).toFixed(1)}" height="4" rx="1" style="fill:var(--info-color, #039be5);fill-opacity:.55"><title>${L.nt_long}</title></rect>`;
   }
   return out;
 };
+
+const fmtPow = (w, unit) => w === null || w === undefined ? '—' : unit === 'kW' ? +(w / 1000).toFixed(2) + ' kW' : Math.round(w) + ' W';
+// element power as a faint area in the lower part of the temperature graph,
+// each longer run labeled with the energy it used
+function powerSvg(d, cfg, X) {
+  const P = d.power, unit = cfg.power_unit || 'W', col = GWRN, y0 = G.PT + (G.PB - G.PT) * 0.45, y1 = G.PB;
+  let max = 0;
+  for (const [, v] of P) if (v > max) max = v;
+  const mag = 10 ** Math.floor(Math.log10(max || 1000)), top = Math.ceil((max || 1000) / mag) * mag;
+  const Yp = v => y1 - Math.max(0, v) / top * (y1 - y0);
+  let area = '', labels = '', run = null;
+  const halo = 'paint-order:stroke;stroke:var(--ha-card-background, var(--card-background-color, #fff));stroke-width:3px;stroke-linejoin:round';
+  const close = end => {
+    if (!run) return;
+    const xa = X(Math.max(run.t, d.t0)), xb = X(end);
+    if (xb - xa >= 12 && run.ws > 0) labels += `<text x="${((xa + xb) / 2).toFixed(1)}" y="${(Yp(run.max) - 3).toFixed(1)}" text-anchor="middle" style="font-size:7.5px;font-weight:600;fill:${col};${halo}">${(run.ws / 3.6e9).toFixed(1)} kWh</text>`;
+    run = null;
+  };
+  for (let i = 0; i < P.length; i++) {
+    const t = P[i][0], e = i + 1 < P.length ? P[i + 1][0] : d.t1, v = P[i][1];
+    const x0 = X(Math.max(t, d.t0)), x1 = X(e);
+    if (x1 > G.PL) {
+      const y = v === null ? y1 : Yp(v);
+      area += (area ? 'L' : `M${x0.toFixed(1)} ${y1}L`) + `${x0.toFixed(1)} ${y.toFixed(1)}L${x1.toFixed(1)} ${y.toFixed(1)}`;
+    }
+    if (v !== null && v > cfg.heater_on_w) {
+      run = run || { t, ws: 0, max: 0 };
+      run.ws += v * (e - Math.max(t, d.t0)); run.max = Math.max(run.max, v);
+    } else close(t);
+  }
+  close(d.t1);
+  return (area ? `<path d="${area}L${X(d.t1).toFixed(1)} ${y1}Z" style="fill:${col};fill-opacity:.25"/>` : '')
+    + `<text x="${G.PR - 2}" y="${(y0 - 2).toFixed(1)}" text-anchor="end" style="font-size:7.5px;fill:${col};${halo}">⚡ ${fmtPow(top, unit)}</text>` + labels;
+}
 
 function renderGraph(d, cfg, lang) {
   const span = d.t1 - d.t0, gap = Math.max(3 * bucketMs(cfg), 20 * 60e3), hours = cfg.graph_hours;
@@ -170,6 +205,8 @@ function renderGraph(d, cfg, lang) {
   lo = Math.floor((lo - 1) / step) * step; hi = Math.ceil((hi + 1) / step) * step;
   const Y = v => G.PB - (v - lo) / (hi - lo) * (G.PB - G.PT);
   const pt = (t, v) => `${X(t).toFixed(1)} ${Y(v).toFixed(1)}`;
+  const showPower = cfg.graph_power && d.power && d.power.length;
+  const BT = G.BT, BB = G.BB, H = G.H;
 
   // summary
   const valveMs = onTime(d, d.valve, d.t0, d.t1), heatMs = d.heat ? onTime(d, d.heat, d.t0, d.t1) : 0, revMs = reverseTime(d, cfg);
@@ -193,8 +230,8 @@ function renderGraph(d, cfg, lang) {
     const t = tick.getTime();
     if (t < d.t0 || (sh < 24 ? tick.getHours() % sh : tick.getHours() || Math.round(t / 864e5) % (sh / 24))) continue;
     const label = sh >= 24 ? tick.toLocaleDateString(lang, { day: 'numeric', month: 'numeric' }) : fmtTime(t, lang, false, cfg.hour12);
-    grid += `<line x1="${X(t)}" x2="${X(t)}" y1="${G.PT}" y2="${G.BB}" style="stroke:var(--divider-color);stroke-width:1;stroke-dasharray:2 3"/>
-      <text x="${X(t)}" y="${G.H - 2}" text-anchor="middle" style="font-size:8.5px;fill:${GSEC}">${label}</text>`;
+    grid += `<line x1="${X(t)}" x2="${X(t)}" y1="${G.PT}" y2="${BB}" style="stroke:var(--divider-color);stroke-width:1;stroke-dasharray:2 3"/>
+      <text x="${X(t)}" y="${H - 2}" text-anchor="middle" style="font-size:8.5px;fill:${GSEC}">${label}</text>`;
   }
 
   // boiler vs supply: green where supply is warmer, red where the valve was open and the supply colder
@@ -224,14 +261,14 @@ function renderGraph(d, cfg, lang) {
   const stops = [0, .25, .5, .75, 1].map(k => `<stop offset="${k}" style="stop-color:${gTc(hi - k * (hi - lo), cfg)}"/>`).join('');
 
   // hourly bars: minutes from heating (green) and electricity (orange)
-  const bm = barMs(cfg), bh = bm / 3600e3, BY = m => G.BB - m / bm * (G.BB - G.BT);
+  const bm = barMs(cfg), bh = bm / 3600e3, BY = m => BB - m / bm * (BB - BT);
   let bars = '';
   for (let a = Math.floor(d.t0 / bm) * bm; a < d.t1; a += bm) {
     const s = Math.max(a, d.t0), e = Math.min(a + bm, d.t1), x0 = X(s), w = X(e) - x0;
     const half = d.heat ? Math.max(0, w / 2 - 0.8) : Math.max(0, w - 1.2);
     const v = onTime(d, d.valve, s, e), h = d.heat ? onTime(d, d.heat, s, e) : 0;
-    if (v > 30e3) bars += `<rect x="${(x0 + .4).toFixed(1)}" y="${BY(v).toFixed(1)}" width="${half.toFixed(1)}" height="${(G.BB - BY(v)).toFixed(1)}" rx="1" style="fill:${GSUC}"/>`;
-    if (h > 30e3) bars += `<rect x="${(x0 + w / 2).toFixed(1)}" y="${BY(h).toFixed(1)}" width="${half.toFixed(1)}" height="${(G.BB - BY(h)).toFixed(1)}" rx="1" style="fill:${GWRN}"/>`;
+    if (v > 30e3) bars += `<rect x="${(x0 + .4).toFixed(1)}" y="${BY(v).toFixed(1)}" width="${half.toFixed(1)}" height="${(BB - BY(v)).toFixed(1)}" rx="1" style="fill:${GSUC}"/>`;
+    if (h > 30e3) bars += `<rect x="${(x0 + w / 2).toFixed(1)}" y="${BY(h).toFixed(1)}" width="${half.toFixed(1)}" height="${(BB - BY(h)).toFixed(1)}" rx="1" style="fill:${GWRN}"/>`;
   }
 
   return `
@@ -241,18 +278,19 @@ function renderGraph(d, cfg, lang) {
       <span id="hleg" style="margin-left:auto;display:flex;gap:4px 12px;flex-wrap:wrap;justify-content:flex-end;align-items:center;font-size:11.5px">${legendHtml(d, cfg, null, lang)}</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px">${chips}</div>
-    <svg id="hsvg" viewBox="0 0 ${G.W} ${G.H}" style="width:100%;height:auto;display:block;overflow:visible;touch-action:pan-y;cursor:crosshair">
+    <svg id="hsvg" viewBox="0 0 ${G.W} ${H}" style="width:100%;height:auto;display:block;overflow:visible;touch-action:pan-y;cursor:crosshair">
       <defs><linearGradient id="hgr" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${Y(hi)}" y2="${Y(lo)}">${stops}</linearGradient></defs>
       ${grid}
+      ${showPower ? powerSvg(d, cfg, X) : ''}
       ${areas}
       ${cfg.supply ? `<path d="${line(S)}" style="fill:none;stroke:url(#hgr);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"/>` : ''}
       <path d="${line(B)}" style="fill:none;stroke:url(#hgr);stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round"/>
-      <line x1="${G.PL}" x2="${G.PR}" y1="${G.BB}" y2="${G.BB}" style="stroke:var(--divider-color)"/>
-      ${d.tariff ? tariffStrip(d, X, L) : ''}
-      <line x1="${G.PL}" x2="${G.PR}" y1="${G.BT}" y2="${G.BT}" style="stroke:var(--divider-color);stroke-dasharray:2 3"/>
-      <text x="${G.PL - 5}" y="${G.BT + 3}" text-anchor="end" style="font-size:8px;fill:${GSEC}">${bh === 1 ? '60 m' : bh + ' h'}</text>
+      <line x1="${G.PL}" x2="${G.PR}" y1="${BB}" y2="${BB}" style="stroke:var(--divider-color)"/>
+      ${d.tariff ? tariffStrip(d, X, L, BB) : ''}
+      <line x1="${G.PL}" x2="${G.PR}" y1="${BT}" y2="${BT}" style="stroke:var(--divider-color);stroke-dasharray:2 3"/>
+      <text x="${G.PL - 5}" y="${BT + 3}" text-anchor="end" style="font-size:8px;fill:${GSEC}">${bh === 1 ? '60 m' : bh + ' h'}</text>
       ${bars}
-      <line id="hcur" x1="0" x2="0" y1="${G.PT}" y2="${G.BB}" style="stroke:var(--primary-text-color);stroke-opacity:.45;stroke-width:1;display:none"/>
+      <line id="hcur" x1="0" x2="0" y1="${G.PT}" y2="${BB}" style="stroke:var(--primary-text-color);stroke-opacity:.45;stroke-width:1;display:none"/>
     </svg>
   </div>`;
 }

@@ -46,8 +46,9 @@ CONFIG = {
     "show_graph": True,    # history below the card (HACS card only)
     "graph_hours": 24,
     "graph_smooth": 20,    # minutes of rolling mean for the graph lines (0 = raw)
+    "graph_power": False,  # element power as an area in the graph, with kWh per run
 }
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 # the author's own settings for the button-card YAML and the preview (not defaults of the HACS card)
 AUTHOR = {"tariff_low": "off"}  # this HDO relay is on during the high tariff
 # preview only: extra config for the simulated page

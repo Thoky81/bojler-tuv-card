@@ -51,6 +51,7 @@ class BojlerTuvCard extends HTMLElement {
     const tf = this._hass?.locale?.time_format;
     this._cfg.locale = this._cfg.lang === 'en' ? this._lang : this._cfg.lang;
     this._cfg.hour12 = tf === '12' ? true : tf === '24' ? false : undefined;
+    this._cfg.power_unit = this._hass?.states?.[this._cfg.heater_power]?.attributes?.unit_of_measurement || 'W';
     const el = this.shadowRoot.getElementById('c');
     if (!this._cfg.boiler || !this._cfg.valve) {
       el.innerHTML = `<div class="msg">${I18N[this._cfg.lang].pick}</div>`;
@@ -136,7 +137,8 @@ const EDITOR = {
     coil_out: 'Spiatočka (z výmenníka)', valve: 'Ventil', heater_power: 'Aktuálny príkon špirály (senzor W alebo kW)',
     heater: 'Elektrická špirála (zap/vyp)', cold: 'Modrá pri', hot: 'Červená pri', min_delta: 'Min. rozdiel na ohrev',
     reverse_tol: 'Tolerancia alarmu', heater_on_w: 'Špirála kúri nad', animate: 'Animácia toku', show_graph: 'Zobraziť históriu',
-    graph_hours: 'Obdobie', graph_smooth: 'Vyhladenie čiar', show_header: 'Hlavička', show_stats: 'Riadok s hodnotami',
+    graph_hours: 'Obdobie', graph_smooth: 'Vyhladenie čiar', graph_power: 'Príkon špirály v grafe',
+    graph_power_help: 'Potrebuje senzor príkonu špirály', show_header: 'Hlavička', show_stats: 'Riadok s hodnotami',
     show_banner: 'Stavový pruh', label_supply: 'Popis: prívod', label_coil_in: 'Popis: do bojlera', label_coil_out: 'Popis: spiatočka',
     empty_default: 'Prázdne = predvolený text v zvolenom jazyku',
     tariff: 'Tarif (nízky / vysoký)', tariff_help: 'Nechaj prázdne, ak máš jednu sadzbu',
@@ -149,7 +151,8 @@ const EDITOR = {
     coil_out: 'Zpátečka (z výměníku)', valve: 'Ventil', heater_power: 'Aktuální příkon spirály (senzor W nebo kW)',
     heater: 'Elektrická spirála (zap/vyp)', cold: 'Modrá při', hot: 'Červená při', min_delta: 'Min. rozdíl pro ohřev',
     reverse_tol: 'Tolerance alarmu', heater_on_w: 'Spirála topí nad', animate: 'Animace toku', show_graph: 'Zobrazit historii',
-    graph_hours: 'Období', graph_smooth: 'Vyhlazení čar', show_header: 'Hlavička', show_stats: 'Řádek s hodnotami',
+    graph_hours: 'Období', graph_smooth: 'Vyhlazení čar', graph_power: 'Příkon spirály v grafu',
+    graph_power_help: 'Potřebuje senzor příkonu spirály', show_header: 'Hlavička', show_stats: 'Řádek s hodnotami',
     show_banner: 'Stavový pruh', label_supply: 'Popisek: přívod', label_coil_in: 'Popisek: do bojleru', label_coil_out: 'Popisek: zpátečka',
     empty_default: 'Prázdné = výchozí text ve zvoleném jazyce',
     tariff: 'Tarif (nízký / vysoký)', tariff_help: 'Nechte prázdné, pokud máte jednu sazbu',
@@ -162,7 +165,8 @@ const EDITOR = {
     coil_out: 'Return (out of the coil)', valve: 'Valve', heater_power: 'Current power of the electric element (W or kW sensor)',
     heater: 'Electric element (on/off)', cold: 'Blue at', hot: 'Red at', min_delta: 'Min. difference to heat',
     reverse_tol: 'Alarm tolerance', heater_on_w: 'Element heats above', animate: 'Flow animation', show_graph: 'Show history',
-    graph_hours: 'Period', graph_smooth: 'Line smoothing', show_header: 'Header', show_stats: 'Values row',
+    graph_hours: 'Period', graph_smooth: 'Line smoothing', graph_power: 'Element power in the graph',
+    graph_power_help: 'Needs the element power sensor', show_header: 'Header', show_stats: 'Values row',
     show_banner: 'Status bar', label_supply: 'Label: supply', label_coil_in: 'Label: into the boiler', label_coil_out: 'Label: return',
     empty_default: 'Empty = default text in the selected language',
     tariff: 'Tariff (off-peak / peak)', tariff_help: 'Leave empty if you have a single rate',
@@ -190,6 +194,7 @@ const schemaFor = E => [
       { name: 'show_graph', selector: { boolean: {} } },
       { name: 'graph_hours', selector: { number: { min: 1, max: 168, mode: 'box', unit_of_measurement: 'h' } } },
       { name: 'graph_smooth', selector: { number: { min: 0, max: 120, step: 5, mode: 'box', unit_of_measurement: 'min' } } },
+      { name: 'graph_power', selector: { boolean: {} } },
     ] },
   ] },
   { name: 'advanced', type: 'expandable', flatten: true, title: E.advanced, schema: [
