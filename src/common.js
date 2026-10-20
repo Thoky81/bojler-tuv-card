@@ -1,4 +1,8 @@
 const C = /*CFG*/;
+const LANG = C.lang || i18nLang(C.language, typeof hass !== 'undefined' && hass ? hass.language : '');
+const T = I18N[LANG], CL = { ...C, lang: LANG };
+const lbl = k => i18nText(CL, k, 'label_' + k);
+const TITLE = i18nText(CL, 'title', 'title');
 const U = C.uid || 'bt';  // constant: each button-card has its own shadow root
 const ok = s => s && !['unknown','unavailable'].includes(s.state);
 const num = id => { if (!id) return null; const s = states[id]; if (!ok(s)) return null; const v = parseFloat(s.state); return isNaN(v) ? null : v; };
@@ -28,7 +32,7 @@ const sg = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.a
 const ago = ts => {
   if (!ts) return '';
   const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
-  return m < 1 ? 'práve' : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`;
+  return m < 1 ? T.just_now : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`;
 };
 const mi = id => id ? `class="bt-click" onclick="event.stopPropagation();this.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:'${id}'}}))"` : '';
 const tint = (c, p) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
@@ -52,23 +56,23 @@ const dCoil = t2 !== null && t3 !== null ? t2 - t3 : null;
 const SUC = 'var(--success-color, #43a047)', ERR = 'var(--error-color, #db4437)', WRN = 'var(--warning-color, #ffa600)';
 const INF = 'var(--info-color, #039be5)', SEC = 'var(--secondary-text-color, #727272)';
 let st;
-if (tb === null || tin === null) st = { k: 'na', c: SEC, icon: 'mdi:lan-disconnect', label: 'nedostupné', txt: 'Teplotné senzory sú nedostupné' };
-else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert', label: 'bojler kúri radiátory', txt: `Ventil je otvorený, ale voda z kúrenia (${f(tin)}) je chladnejšia ako bojler (${f(tb)}). Bojler ohrieva radiátory.` };
-else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: 'ohrev z kúrenia', txt: `Kúrenie ohrieva bojler` + (dCoil !== null ? ` · výmenník odovzdáva ${dCoil.toFixed(1)}°` : '') };
-else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: 'kúrenie je teplé', txt: `Prívod je o ${dSup.toFixed(1)}° teplejší ako bojler, ventil by mohol otvoriť` };
-else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: 'elektrický ohrev', txt: `Ohrieva elektrina · kúrenie je ${dSup !== null && dSup < 0 ? 'chladnejšie ako bojler' : 'málo teplé'}` };
-else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: 'pohotovosť', txt: dSup === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${dSup >= 0 ? 'len o ' + dSup.toFixed(1) + '° teplejší' : 'o ' + (-dSup).toFixed(1) + '° chladnejší'} ako bojler` };
+if (tb === null || tin === null) st = { k: 'na', c: SEC, icon: 'mdi:lan-disconnect', label: T.na, txt: T.na_txt };
+else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert', label: T.bad, txt: T.bad_txt(f(tin), f(tb)) };
+else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
+else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
+else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
 const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
-if (!vOk) pills += pill('ventil nedostupný', SEC);
-if (heating && st.k !== 'el') pills += pill('⚡ elektrina', WRN);
+if (!vOk) pills += pill(T.valve_unavailable, SEC);
+if (heating && st.k !== 'el') pills += pill(T.el_badge, WRN);
 pills += pill(st.label, st.c);
 
 
 const cB = tc(tb), c1 = tc(t1), c2 = tc(t2), c3 = tc(t3);
 const vCol = !vOk ? SEC : open ? SUC : SEC;
-const vTxt = !vOk ? 'nedostupný' : open ? 'otvorený' : 'zatvorený';
+const vTxt = !vOk ? T.unavailable : open ? T.open : T.closed;
 const dCol = !open || dCoil === null ? SEC : dCoil >= 0 ? SUC : ERR;
 const supCol = dSup === null ? SEC : dSup >= C.min_delta ? SUC : dSup >= 0 ? WRN : ERR;
 const flowCol = st.k === 'bad' ? ERR : '#fff';
@@ -88,7 +92,7 @@ const STYLE = `
 const header = (extra = '') => `
   <div style="display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--divider-color)">
     <ha-icon icon="mdi:water-boiler" style="--mdc-icon-size:18px;color:${st.c};flex-shrink:0"></ha-icon>
-    <span style="font-size:15px;font-weight:500">${C.title}</span>${extra}
+    <span style="font-size:15px;font-weight:500">${TITLE}</span>${extra}
     <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${pills}</span>
   </div>`;
 const banner = () => `

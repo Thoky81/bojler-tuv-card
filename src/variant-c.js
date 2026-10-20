@@ -47,9 +47,9 @@ const pipe = `
     <path d="M${PV - 12} ${PY - 10} L${PV} ${PY} L${PV - 12} ${PY + 10} Z M${PV + 12} ${PY - 10} L${PV} ${PY} L${PV + 12} ${PY + 10} Z" style="fill:${vCol};fill-opacity:${open ? 1 : .55};stroke:${CARD_BG};stroke-width:1.5;stroke-linejoin:round"/>
     <text x="${PV}" y="${PY + 26}" text-anchor="middle" style="font-size:7.5px;letter-spacing:1px;font-weight:600;fill:${vCol}">${vTxt.toUpperCase()}</text>
   </g>
-  ${tBadge(P1, PY, t1, C.supply, C.label_supply, PY - 18)}
-  ${tBadge(P2, PY, t2, C.coil_in, C.label_coil_in, PY - 18)}
-  ${tBadge(P3, PY, t3, C.coil_out, C.label_coil_out, PY - 18)}
+  ${tBadge(P1, PY, t1, C.supply, lbl('supply'), PY - 18)}
+  ${tBadge(P2, PY, t2, C.coil_in, lbl('coil_in'), PY - 18)}
+  ${tBadge(P3, PY, t3, C.coil_out, lbl('coil_out'), PY - 18)}
   <text x="${(B0 + B1) / 2}" y="${PY + 38}" text-anchor="middle" style="font-size:9px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums">Δ ${sg(dCoil)}</text>
   <text x="${X0}" y="${PY + 38}" style="font-size:7.5px;fill:${SEC}">z kúrenia →</text>
   <text x="${X1}" y="${PY + 38}" text-anchor="end" style="font-size:7.5px;fill:${SEC}">→ do kúrenia</text>

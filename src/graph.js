@@ -124,22 +124,22 @@ const smooth = (arr, win, gap) => {
     return [t, s / n];
   });
 };
-const fmtTime = (t, lang, withDate) => new Date(t).toLocaleString(lang, withDate
-  ? { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
+const fmtTime = (t, lang, withDate, hour12) => new Date(t).toLocaleString(lang, withDate
+  ? { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hour12 } : { hour: '2-digit', minute: '2-digit', hour12 });
 const fmtDur = ms => { const m = Math.round(ms / 60e3); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
 
 function legendHtml(d, cfg, T, lang) {
   const sw = (dash, w, v) => `<svg width="18" height="6" viewBox="0 0 18 6"><path d="M1 3 H17" style="stroke:${gTc(v, cfg)};stroke-width:${w};stroke-dasharray:${dash};stroke-linecap:round"/></svg>`;
   const item = (label, v, dash, w) => `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap">${sw(dash, w, v)}
     <span style="color:${GSEC}">${label}</span><b style="font-weight:600;color:${gTc(v, cfg)};font-variant-numeric:tabular-nums">${v === null ? '—' : v.toFixed(1) + '°'}</b></span>`;
-  const at = T ?? d.t1;
-  let out = `<span style="color:${GSEC};font-variant-numeric:tabular-nums;white-space:nowrap">${T == null ? 'teraz' : fmtTime(T, lang, cfg.graph_hours > 24)}</span>`;
-  out += item('bojler', valueAt(d.series.boiler, at), 'none', 2.6);
-  if (cfg.supply) out += item(String(cfg.label_supply).toLowerCase(), valueAt(d.series.supply, at), 'none', 1.6);
+  const at = T ?? d.t1, L = I18N[cfg.lang || 'sk'];
+  let out = `<span style="color:${GSEC};font-variant-numeric:tabular-nums;white-space:nowrap">${T == null ? L.hist_now : fmtTime(T, lang, cfg.graph_hours > 24, cfg.hour12)}</span>`;
+  out += item(L.boiler, valueAt(d.series.boiler, at), 'none', 2.6);
+  if (cfg.supply) out += item(i18nText(cfg, 'supply', 'label_supply').toLowerCase(), valueAt(d.series.supply, at), 'none', 1.6);
   if (T != null) {
     const bm = barMs(cfg), a = Math.floor(T / bm) * bm, b = a + bm;
-    out += `<span style="white-space:nowrap;color:${GSEC}">kúrenie <b style="font-weight:600;color:${GSUC}">${Math.round(onTime(d, d.valve, a, b) / 60e3)} min</b>`
-      + (d.heat ? ` · elektrina <b style="font-weight:600;color:${GWRN}">${Math.round(onTime(d, d.heat, a, b) / 60e3)} min</b>` : '') + '</span>';
+    out += `<span style="white-space:nowrap;color:${GSEC}">${L.h_heat} <b style="font-weight:600;color:${GSUC}">${Math.round(onTime(d, d.valve, a, b) / 60e3)} min</b>`
+      + (d.heat ? ` · ${L.h_el} <b style="font-weight:600;color:${GWRN}">${Math.round(onTime(d, d.heat, a, b) / 60e3)} min</b>` : '') + '</span>';
   }
   return out;
 }
@@ -161,10 +161,11 @@ function renderGraph(d, cfg, lang) {
   const valveMs = onTime(d, d.valve, d.t0, d.t1), heatMs = d.heat ? onTime(d, d.heat, d.t0, d.t1) : 0, revMs = reverseTime(d, cfg);
   const chip = (label, val, col) => `<div style="min-width:0"><div style="font-size:11px;color:${GSEC};white-space:nowrap">${label}</div>
     <div style="font-size:15px;font-weight:500;color:${col};white-space:nowrap;font-variant-numeric:tabular-nums">${val}</div></div>`;
-  let chips = chip('ohrev z kúrenia', fmtDur(valveMs), GSUC);
-  if (d.heat) chips += chip('elektrina', fmtDur(heatMs), GWRN);
-  if (d.power) chips += chip('spotreba elektriny', kwhIn(d, d.t0, d.t1).toFixed(1) + ' kWh', 'var(--primary-text-color)');
-  if (revMs >= 5 * 60e3) chips += chip('bojler kúril radiátory', fmtDur(revMs), GERR);
+  const L = I18N[cfg.lang || 'sk'];
+  let chips = chip(L.c_heat, fmtDur(valveMs), GSUC);
+  if (d.heat) chips += chip(L.c_el, fmtDur(heatMs), GWRN);
+  if (d.power) chips += chip(L.c_kwh, kwhIn(d, d.t0, d.t1).toFixed(1) + ' kWh', 'var(--primary-text-color)');
+  if (revMs >= 5 * 60e3) chips += chip(L.c_rev, fmtDur(revMs), GERR);
 
   // grid + time axis
   let grid = '';
@@ -177,7 +178,7 @@ function renderGraph(d, cfg, lang) {
   for (let i = 0; i < 400 && tick.getTime() <= d.t1; i++, tick.setHours(tick.getHours() + 1)) {
     const t = tick.getTime();
     if (t < d.t0 || (sh < 24 ? tick.getHours() % sh : tick.getHours() || Math.round(t / 864e5) % (sh / 24))) continue;
-    const label = sh >= 24 ? tick.toLocaleDateString(lang, { day: 'numeric', month: 'numeric' }) : fmtTime(t, lang, false);
+    const label = sh >= 24 ? tick.toLocaleDateString(lang, { day: 'numeric', month: 'numeric' }) : fmtTime(t, lang, false, cfg.hour12);
     grid += `<line x1="${X(t)}" x2="${X(t)}" y1="${G.PT}" y2="${G.BB}" style="stroke:var(--divider-color);stroke-width:1;stroke-dasharray:2 3"/>
       <text x="${X(t)}" y="${G.H - 2}" text-anchor="middle" style="font-size:8.5px;fill:${GSEC}">${label}</text>`;
   }
@@ -222,7 +223,7 @@ function renderGraph(d, cfg, lang) {
   return `
   <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;margin-top:12px;border-top:1px solid var(--divider-color)">
     <div style="display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap">
-      <span style="font-size:11px;font-weight:600;letter-spacing:1.2px;color:${GSEC}">HISTÓRIA · ${hours} h</span>
+      <span style="font-size:11px;font-weight:600;letter-spacing:1.2px;color:${GSEC}">${L.hist} · ${hours} h</span>
       <span id="hleg" style="margin-left:auto;display:flex;gap:4px 12px;flex-wrap:wrap;justify-content:flex-end;align-items:center;font-size:11.5px">${legendHtml(d, cfg, null, lang)}</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px">${chips}</div>

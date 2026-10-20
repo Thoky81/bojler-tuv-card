@@ -17,14 +17,14 @@ const svg = `
 
   <!-- hot / cold water -->
   <path d="M266 18 V8 H392" style="fill:none;stroke:${cB};stroke-width:5;stroke-linecap:round;stroke-opacity:.55"/>
-  <text x="392" y="24" text-anchor="end" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">TEPLÁ VODA</text>
+  <text x="392" y="24" text-anchor="end" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">${T.hot_water}</text>
   <path d="M266 226 V236 H392" style="fill:none;stroke:${tc(C.cold)};stroke-width:5;stroke-linecap:round;stroke-opacity:.7"/>
-  <text x="392" y="228" text-anchor="end" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">STUDENÁ VODA</text>
+  <text x="392" y="228" text-anchor="end" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">${T.cold_water}</text>
 
   <!-- tank -->
   <g ${mi(C.boiler)}>
     <rect x="${WALL}" y="18" width="104" height="208" rx="40" style="fill:url(#w${U});fill-opacity:.2;stroke:${st.k === 'bad' ? ERR : SEC};stroke-opacity:${st.k === 'bad' ? 1 : .35};stroke-width:3"/>
-    <text x="266" y="62" text-anchor="middle" style="font-size:9px;letter-spacing:1.5px;font-weight:600;fill:${SEC}">BOJLER</text>
+    <text x="266" y="62" text-anchor="middle" style="font-size:9px;letter-spacing:1.5px;font-weight:600;fill:${SEC}">${T.BOILER}</text>
     <text x="266" y="96" text-anchor="middle" style="font-size:30px;font-weight:500;fill:${cB};font-variant-numeric:tabular-nums">${tb === null ? '—' : tb.toFixed(1)}<tspan style="font-size:16px" dy="-11">°C</tspan></text>
   </g>
 
@@ -56,13 +56,13 @@ const svg = `
     <rect x="${VX - 9}" y="94" width="18" height="12" rx="2.5" style="fill:${vCol};fill-opacity:${open ? 1 : .55}"/>
     <rect x="${VX - 1}" y="106" width="2" height="9" style="fill:${vCol}"/>
     <path d="M${VX - 12} 114 L${VX} ${SY} L${VX - 12} 134 Z M${VX + 12} 114 L${VX} ${SY} L${VX + 12} 134 Z" style="fill:${vCol};fill-opacity:${open ? 1 : .55};stroke:${CARD_BG};stroke-width:1.5;stroke-linejoin:round"/>
-    <text x="${VX}" y="151" text-anchor="middle" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${vCol}">${!vOk ? 'VENTIL ?' : open ? 'OTVORENÝ' : 'ZATVORENÝ'}</text>
+    <text x="${VX}" y="151" text-anchor="middle" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${vCol}">${!vOk ? T.valve_q : vTxt.toUpperCase()}</text>
   </g>
 
-  ${tBadge(52, SY, t1, C.supply, C.label_supply, 105)}
-  ${tBadge(TX, SY, t2, C.coil_in, C.label_coil_in, 105)}
-  ${tBadge(TX, RY, t3, C.coil_out, C.label_coil_out, 193)}
-  ${open ? `<text x="${TX}" y="149" text-anchor="middle" style="font-size:10px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums"><title>${C.label_coil_in.toLowerCase()} ${f(t2)} − ${C.label_coil_out.toLowerCase()} ${f(t3)}</title>Δ ${sg(dCoil)}</text>` : ''}
+  ${tBadge(52, SY, t1, C.supply, lbl('supply'), 105)}
+  ${tBadge(TX, SY, t2, C.coil_in, lbl('coil_in'), 105)}
+  ${tBadge(TX, RY, t3, C.coil_out, lbl('coil_out'), 193)}
+  ${open ? `<text x="${TX}" y="149" text-anchor="middle" style="font-size:10px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums"><title>${lbl('coil_in').toLowerCase()} ${f(t2)} − ${lbl('coil_out').toLowerCase()} ${f(t3)}</title>Δ ${sg(dCoil)}</text>` : ''}
 </svg>`;
 
 // ---------- stats ----------
@@ -71,14 +71,14 @@ const cell = (label, val, col, id, tip = '') => `
     <div style="font-size:11px;color:${SEC};white-space:nowrap">${label}</div>
     <div style="font-size:15px;font-weight:500;color:${col};white-space:nowrap;font-variant-numeric:tabular-nums">${val}</div>
   </div>`;
-let cells = cell('bojler', f(tb), cB, C.boiler)
-  + cell('prívod − bojler', sg(dSup), supCol, C.supply, `${C.label_supply.toLowerCase()} ${f(t1)} − bojler ${f(tb)}`)
+let cells = cell(T.boiler, f(tb), cB, C.boiler)
+  + cell(T.s_sup, sg(dSup), supCol, C.supply, `${lbl('supply').toLowerCase()} ${f(t1)} − ${T.boiler} ${f(tb)}`)
   // with the valve closed the water in the coil stands still, so in − out says nothing
-  + cell('výmenník Δ', open ? sg(dCoil) : '—', dCol, C.coil_in,
-    open ? `${C.label_coil_in.toLowerCase()} ${f(t2)} − ${C.label_coil_out.toLowerCase()} ${f(t3)}` : 'len pri otvorenom ventile')
-  + cell(vOk ? `ventil · ${ago(vS.last_changed)}` : 'ventil', vTxt, vCol, C.valve);
-if (pw !== null) cells += cell('elektrina', pwTxt, heating ? WRN : SEC, C.heater_power, C.heater_power);
-else if (C.heater) cells += cell('elektrina', heating ? 'zapnutá' : 'vypnutá', heating ? WRN : SEC, C.heater);
+  + cell(T.s_coil, open ? sg(dCoil) : '—', dCol, C.coil_in,
+    open ? `${lbl('coil_in').toLowerCase()} ${f(t2)} − ${lbl('coil_out').toLowerCase()} ${f(t3)}` : T.coil_only_open)
+  + cell(vOk ? `${T.valve} · ${ago(vS.last_changed)}` : T.valve, vTxt, vCol, C.valve);
+if (pw !== null) cells += cell(T.s_el, pwTxt, heating ? WRN : SEC, C.heater_power, C.heater_power);
+else if (C.heater) cells += cell(T.s_el, heating ? T.el_on : T.el_off, heating ? WRN : SEC, C.heater);
 
 return wrap(`
   ${C.show_header !== false ? header() : ''}

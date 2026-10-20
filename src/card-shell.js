@@ -5,6 +5,8 @@ const VERSION = '/*VERSION*/';
 const DEFAULTS = /*DEFAULTS*/;
 const ENTITY_KEYS = ['boiler', 'supply', 'coil_in', 'coil_out', 'valve', 'heater', 'heater_power'];
 
+/*I18N*/
+
 /*RENDER*/
 
 /*GRAPH*/
@@ -44,9 +46,14 @@ class BojlerTuvCard extends HTMLElement {
       g.addEventListener('pointermove', e => this._hover(at(e)));
       g.addEventListener('pointerleave', () => this._hover(null));
     }
+    this._cfg.lang = i18nLang(this._cfg.language, this._lang);
+    // dates/times: the card language (English keeps the HA locale), 12/24 h from the HA profile
+    const tf = this._hass?.locale?.time_format;
+    this._cfg.locale = this._cfg.lang === 'en' ? this._lang : this._cfg.lang;
+    this._cfg.hour12 = tf === '12' ? true : tf === '24' ? false : undefined;
     const el = this.shadowRoot.getElementById('c');
     if (!this._cfg.boiler || !this._cfg.valve) {
-      el.innerHTML = '<div class="msg">Vyber entitu bojlera (teplota) a ventilu v editore karty.</div>';
+      el.innerHTML = `<div class="msg">${I18N[this._cfg.lang].pick}</div>`;
       this.shadowRoot.getElementById('g').innerHTML = '';
       return;
     }
@@ -54,7 +61,7 @@ class BojlerTuvCard extends HTMLElement {
     this._graphUpdate();
   }
 
-  get _lang() { return this._hass?.locale?.language || this._hass?.language || 'sk'; }
+  get _lang() { return this._hass?.locale?.language || this._hass?.language || 'en'; }
 
   _graphUpdate() {
     const g = this.shadowRoot.getElementById('g');
@@ -63,7 +70,7 @@ class BojlerTuvCard extends HTMLElement {
     if (this._loading || this._histErr) return;
     const gk = this._gk, msg = t => `<div class="msg" style="padding-top:12px;margin-top:12px;border-top:1px solid var(--divider-color);font-size:12.5px">${t}</div>`;
     this._loading = true;
-    g.innerHTML = msg('Načítavam históriu…');
+    g.innerHTML = msg(I18N[this._cfg.lang].loading);
     loadHistory(this._hass, this._cfg).then(d => {
       if (gk !== this._gk) return;
       this._hist = d;
@@ -72,7 +79,7 @@ class BojlerTuvCard extends HTMLElement {
     }).catch(err => {
       if (gk !== this._gk) return;
       this._histErr = true;
-      g.innerHTML = msg('História nie je dostupná: ' + (err?.message || err));
+      g.innerHTML = msg(I18N[this._cfg.lang].hist_err + (err?.message || err));
     }).finally(() => {
       this._loading = false;
       if (gk !== this._gk && this._hass) this._render();
@@ -88,7 +95,7 @@ class BojlerTuvCard extends HTMLElement {
 
   _drawGraph() {
     if (!this._hist || !this.shadowRoot || !this._cfg.show_graph) return;
-    this.shadowRoot.getElementById('g').innerHTML = renderGraph(this._hist, this._cfg, this._lang);
+    this.shadowRoot.getElementById('g').innerHTML = renderGraph(this._hist, this._cfg, this._cfg.locale);
     this._gDrawn = Date.now();
   }
 
@@ -100,7 +107,7 @@ class BojlerTuvCard extends HTMLElement {
       const x = G.PL + (T - d.t0) / (d.t1 - d.t0) * (G.PR - G.PL);
       cur.setAttribute('x1', x); cur.setAttribute('x2', x); cur.style.display = '';
     }
-    leg.innerHTML = legendHtml(d, this._cfg, T, this._lang);
+    leg.innerHTML = legendHtml(d, this._cfg, T, this._cfg.locale);
   }
 
   connectedCallback() { if (this._hist) this._drawGraph(); }
@@ -122,7 +129,43 @@ class BojlerTuvCard extends HTMLElement {
   }
 }
 
-const SCHEMA = [
+const EDITOR = {
+  sk: {
+    language: 'Jazyk', auto: 'Automaticky (podľa Home Assistanta)', history: 'História', advanced: 'Rozšírené',
+    title: 'Názov', boiler: 'Teplota bojlera', supply: 'Prívod z kúrenia (pred ventilom)', coil_in: 'Do bojlera (za ventilom)',
+    coil_out: 'Spiatočka (z výmenníka)', valve: 'Ventil', heater_power: 'Aktuálny príkon špirály (senzor W alebo kW)',
+    heater: 'Elektrická špirála (zap/vyp)', cold: 'Modrá pri', hot: 'Červená pri', min_delta: 'Min. rozdiel na ohrev',
+    reverse_tol: 'Tolerancia alarmu', heater_on_w: 'Špirála kúri nad', animate: 'Animácia toku', show_graph: 'Zobraziť históriu',
+    graph_hours: 'Obdobie', graph_smooth: 'Vyhladenie čiar', show_header: 'Hlavička', show_stats: 'Riadok s hodnotami',
+    show_banner: 'Stavový pruh', label_supply: 'Popis: prívod', label_coil_in: 'Popis: do bojlera', label_coil_out: 'Popis: spiatočka',
+    empty_default: 'Prázdne = predvolený text v zvolenom jazyku',
+  },
+  cs: {
+    language: 'Jazyk', auto: 'Automaticky (podle Home Assistantu)', history: 'Historie', advanced: 'Rozšířené',
+    title: 'Název', boiler: 'Teplota bojleru', supply: 'Přívod z topení (před ventilem)', coil_in: 'Do bojleru (za ventilem)',
+    coil_out: 'Zpátečka (z výměníku)', valve: 'Ventil', heater_power: 'Aktuální příkon spirály (senzor W nebo kW)',
+    heater: 'Elektrická spirála (zap/vyp)', cold: 'Modrá při', hot: 'Červená při', min_delta: 'Min. rozdíl pro ohřev',
+    reverse_tol: 'Tolerance alarmu', heater_on_w: 'Spirála topí nad', animate: 'Animace toku', show_graph: 'Zobrazit historii',
+    graph_hours: 'Období', graph_smooth: 'Vyhlazení čar', show_header: 'Hlavička', show_stats: 'Řádek s hodnotami',
+    show_banner: 'Stavový pruh', label_supply: 'Popisek: přívod', label_coil_in: 'Popisek: do bojleru', label_coil_out: 'Popisek: zpátečka',
+    empty_default: 'Prázdné = výchozí text ve zvoleném jazyce',
+  },
+  en: {
+    language: 'Language', auto: 'Auto (Home Assistant language)', history: 'History', advanced: 'Advanced',
+    title: 'Title', boiler: 'Boiler temperature', supply: 'Heating supply (in front of the valve)', coil_in: 'Into the boiler (after the valve)',
+    coil_out: 'Return (out of the coil)', valve: 'Valve', heater_power: 'Current power of the electric element (W or kW sensor)',
+    heater: 'Electric element (on/off)', cold: 'Blue at', hot: 'Red at', min_delta: 'Min. difference to heat',
+    reverse_tol: 'Alarm tolerance', heater_on_w: 'Element heats above', animate: 'Flow animation', show_graph: 'Show history',
+    graph_hours: 'Period', graph_smooth: 'Line smoothing', show_header: 'Header', show_stats: 'Values row',
+    show_banner: 'Status bar', label_supply: 'Label: supply', label_coil_in: 'Label: into the boiler', label_coil_out: 'Label: return',
+    empty_default: 'Empty = default text in the selected language',
+  },
+};
+const TEXT_KEYS = { title: 'title', label_supply: 'supply', label_coil_in: 'coil_in', label_coil_out: 'coil_out' };
+const schemaFor = E => [
+  { name: 'language', selector: { select: { mode: 'dropdown', options: [
+    { value: 'auto', label: E.auto }, { value: 'sk', label: 'Slovenčina' }, { value: 'cs', label: 'Čeština' }, { value: 'en', label: 'English' },
+  ] } } },
   { name: 'title', selector: { text: {} } },
   { name: 'boiler', required: true, selector: { entity: { domain: 'sensor' } } },
   { name: 'supply', selector: { entity: { domain: 'sensor' } } },
@@ -131,14 +174,14 @@ const SCHEMA = [
   { name: 'valve', required: true, selector: { entity: { domain: ['switch', 'valve', 'binary_sensor', 'input_boolean'] } } },
   { name: 'heater_power', selector: { entity: { domain: 'sensor' } } },
   { name: 'heater', selector: { entity: { domain: ['switch', 'binary_sensor', 'input_boolean'] } } },
-  { name: 'history', type: 'expandable', flatten: true, title: 'História', schema: [
+  { name: 'history', type: 'expandable', flatten: true, title: E.history, schema: [
     { name: '', type: 'grid', schema: [
       { name: 'show_graph', selector: { boolean: {} } },
       { name: 'graph_hours', selector: { number: { min: 1, max: 168, mode: 'box', unit_of_measurement: 'h' } } },
       { name: 'graph_smooth', selector: { number: { min: 0, max: 120, step: 5, mode: 'box', unit_of_measurement: 'min' } } },
     ] },
   ] },
-  { name: 'advanced', type: 'expandable', flatten: true, title: 'Rozšírené', schema: [
+  { name: 'advanced', type: 'expandable', flatten: true, title: E.advanced, schema: [
     { name: '', type: 'grid', schema: [
       { name: 'cold', selector: { number: { mode: 'box', unit_of_measurement: '°C' } } },
       { name: 'hot', selector: { number: { mode: 'box', unit_of_measurement: '°C' } } },
@@ -157,48 +200,33 @@ const SCHEMA = [
     { name: 'label_coil_out', selector: { text: {} } },
   ] },
 ];
-const LABELS = {
-  title: 'Názov',
-  boiler: 'Teplota bojlera',
-  supply: 'Prívod z kúrenia (pred ventilom)',
-  coil_in: 'Do bojlera (za ventilom)',
-  coil_out: 'Spiatočka (z výmenníka)',
-  valve: 'Ventil',
-  heater_power: 'Aktuálny príkon špirály (senzor W alebo kW)',
-  heater: 'Elektrická špirála (zap/vyp)',
-  cold: 'Modrá pri',
-  hot: 'Červená pri',
-  min_delta: 'Min. rozdiel na ohrev',
-  reverse_tol: 'Tolerancia alarmu',
-  heater_on_w: 'Špirála kúri nad',
-  animate: 'Animácia toku',
-  show_graph: 'Zobraziť históriu',
-  graph_hours: 'Obdobie',
-  graph_smooth: 'Vyhladenie čiar',
-  show_header: 'Hlavička',
-  show_stats: 'Riadok s hodnotami',
-  show_banner: 'Stavový pruh',
-  label_supply: 'Popis: prívod',
-  label_coil_in: 'Popis: do bojlera',
-  label_coil_out: 'Popis: spiatočka',
-};
 
 class BojlerTuvCardEditor extends HTMLElement {
   setConfig(config) { this._config = config; this._update(); }
   set hass(hass) { this._hass = hass; this._update(); }
   _update() {
     if (!this._hass || !this._config) return;
+    const E = EDITOR[i18nLang(this._config.language, this._hass.locale?.language || this._hass.language)];
     if (!this._form) {
       this._form = document.createElement('ha-form');
-      this._form.computeLabel = s => LABELS[s.name] || s.name;
       this._form.addEventListener('value-changed', e => {
-        this._config = e.detail.value;
-        this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+        // save only what differs from the defaults; a default text of any language counts as "not set"
+        const cfg = { ...e.detail.value };
+        for (const k of Object.keys(cfg)) {
+          if (k === 'type') continue;
+          const v = cfg[k];
+          if (v === '' || v === undefined || v === null || v === DEFAULTS[k]
+            || (TEXT_KEYS[k] && Object.values(I18N).some(t => t[TEXT_KEYS[k]] === v))) delete cfg[k];
+        }
+        this._config = cfg;
+        this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: cfg }, bubbles: true, composed: true }));
       });
       this.appendChild(this._form);
     }
+    this._form.computeLabel = s => E[s.name] || s.name;
+    this._form.computeHelper = s => TEXT_KEYS[s.name] ? E.empty_default : undefined;
     this._form.hass = this._hass;
-    this._form.schema = SCHEMA;
+    this._form.schema = schemaFor(E);
     this._form.data = { ...DEFAULTS, ...this._config };
   }
 }
@@ -209,7 +237,7 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'bojler-tuv-card',
   name: 'Bojler + TUV',
-  description: 'Kombinovaný bojler: ohrev z kúrenia cez ventil a elektrická špirála.',
+  description: 'Combined boiler heated by the central heating through a valve or by an electric element (SK / CS / EN).',
   preview: true,
   documentationURL: 'https://github.com/Thoky81/bojler-tuv-card',
 });

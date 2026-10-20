@@ -19,7 +19,8 @@ import sys
 from pathlib import Path
 
 CONFIG = {
-    "title": "Bojler",
+    "title": "",           # empty = default title in the card language
+    "language": "auto",    # auto (Home Assistant language), sk, cs, en
     "boiler":   "sensor.bojler_temp_tuv_bojler",       # water temperature in the tank
     "supply":   "sensor.tuv_sensors_tuv_pipe_near",    # heating supply, before the valve
     "coil_in":  "sensor.bojler_temp_tuv_pipe",         # after the valve, into the boiler coil
@@ -28,9 +29,9 @@ CONFIG = {
     "heater": "",          # optional: switch/binary_sensor of the electric element
     "heater_power": "sensor.bojler_power",  # power sensor (W) of the electric element
     "heater_on_w": 50,     # W above which the element counts as heating
-    "label_supply": "PRÍVOD",
-    "label_coil_in": "DO BOJLERA",
-    "label_coil_out": "SPIATOČKA",
+    "label_supply": "",    # empty = default pipe labels in the card language
+    "label_coil_in": "",
+    "label_coil_out": "",
     "cold": 0,             # °C shown fully blue
     "hot": 80,             # °C shown fully red
     "min_delta": 3,        # °C supply must beat the boiler by to be worth opening
@@ -43,18 +44,20 @@ CONFIG = {
     "graph_hours": 24,
     "graph_smooth": 20,    # minutes of rolling mean for the graph lines (0 = raw)
 }
-VERSION = "1.2.3"
+VERSION = "1.3.0"
 # preview only: extra config for the simulated page
 PREVIEW_EXTRA = {}
 
 HERE = Path(__file__).parent
 SRC = HERE / "src"
 COMMON = (SRC / "common.js").read_text()
+I18N_JS = (SRC / "i18n.js").read_text()
 VARIANTS = "ABCD"
 
 
-def template(v):
-    return COMMON + "\n" + (SRC / f"variant-{v.lower()}.js").read_text()
+def template(v, i18n=True):
+    # the HACS card has i18n.js at top level (shared with the graph), the other outputs inline it
+    return (I18N_JS + "\n" if i18n else "") + COMMON + "\n" + (SRC / f"variant-{v.lower()}.js").read_text()
 
 ENTITY_KEYS = ["boiler", "supply", "coil_in", "coil_out", "valve", "heater", "heater_power"]
 
@@ -102,10 +105,11 @@ def preview():
 
 def card_js():
     defaults = {k: ("" if k in ENTITY_KEYS else v) for k, v in CONFIG.items()}
-    fn = "function renderCard(states, C) {\n" + template("A").replace("const C = /*CFG*/;", "") + "\n}"
+    fn = "function renderCard(states, C) {\n" + template("A", i18n=False).replace("const C = /*CFG*/;", "") + "\n}"
     return ((SRC / "card-shell.js").read_text()
             .replace("/*VERSION*/", VERSION)
             .replace("/*DEFAULTS*/", json.dumps(defaults, ensure_ascii=False))
+            .replace("/*I18N*/", I18N_JS)
             .replace("/*RENDER*/", fn)
             .replace("/*GRAPH*/", (SRC / "graph.js").read_text()))
 

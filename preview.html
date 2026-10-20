@@ -123,9 +123,93 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-const PREVIEW_CFG = {"title": "Bojler", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "label_supply": "PRÍVOD", "label_coil_in": "DO BOJLERA", "label_coil_out": "SPIATOČKA", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24, "graph_smooth": 20};
+const PREVIEW_CFG = {"title": "", "language": "auto", "boiler": "sensor.bojler_temp_tuv_bojler", "supply": "sensor.tuv_sensors_tuv_pipe_near", "coil_in": "sensor.bojler_temp_tuv_pipe", "coil_out": "sensor.tuv_sensors_tuv_pipe_near_2", "valve": "switch.tuv_bojler_valve", "heater": "", "heater_power": "sensor.bojler_power", "heater_on_w": 50, "label_supply": "", "label_coil_in": "", "label_coil_out": "", "cold": 0, "hot": 80, "min_delta": 3, "reverse_tol": 0.5, "animate": true, "show_header": true, "show_stats": true, "show_banner": true, "show_graph": true, "graph_hours": 24, "graph_smooth": 20};
 function renderA(states, C) {
+// ---------- translations (language: auto = Home Assistant's language, sk, cs, en) ----------
+const I18N = {
+  sk: {
+    title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
+    supply: 'PRÍVOD', coil_in: 'DO BOJLERA', coil_out: 'SPIATOČKA',
+    hot_water: 'TEPLÁ VODA', cold_water: 'STUDENÁ VODA',
+    open: 'otvorený', closed: 'zatvorený', unavailable: 'nedostupný', valve: 'ventil', valve_q: 'VENTIL ?',
+    valve_unavailable: 'ventil nedostupný', el_badge: '⚡ elektrina',
+    na: 'nedostupné', na_txt: 'Teplotné senzory sú nedostupné',
+    bad: 'bojler kúri radiátory',
+    bad_txt: (tin, tb) => `Ventil je otvorený, ale voda z kúrenia (${tin}) je chladnejšia ako bojler (${tb}). Bojler ohrieva radiátory.`,
+    tuv: 'ohrev z kúrenia', tuv_txt: d => 'Kúrenie ohrieva bojler' + (d !== null ? ` · výmenník odovzdáva ${d.toFixed(1)}°` : ''),
+    ready: 'kúrenie je teplé', ready_txt: d => `Prívod je o ${d.toFixed(1)}° teplejší ako bojler, ventil by mohol otvoriť`,
+    el: 'elektrický ohrev', el_txt: colder => `Ohrieva elektrina · kúrenie je ${colder ? 'chladnejšie ako bojler' : 'málo teplé'}`,
+    idle: 'pohotovosť',
+    idle_txt: d => d === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${d >= 0 ? 'len o ' + d.toFixed(1) + '° teplejší' : 'o ' + (-d).toFixed(1) + '° chladnejší'} ako bojler`,
+    s_sup: 'prívod − bojler', s_coil: 'výmenník Δ', s_el: 'elektrina', el_on: 'zapnutá', el_off: 'vypnutá',
+    coil_only_open: 'len pri otvorenom ventile',
+    just_now: 'práve',
+    hist: 'HISTÓRIA', hist_now: 'teraz', c_heat: 'ohrev z kúrenia', c_el: 'elektrina', c_kwh: 'spotreba elektriny',
+    c_rev: 'bojler kúril radiátory', h_heat: 'kúrenie', h_el: 'elektrina', h_valve: 'ventil', h_element: 'špirála',
+    loading: 'Načítavam históriu…', hist_err: 'História nie je dostupná: ',
+    pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
+  },
+  cs: {
+    title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
+    supply: 'PŘÍVOD', coil_in: 'DO BOJLERU', coil_out: 'ZPÁTEČKA',
+    hot_water: 'TEPLÁ VODA', cold_water: 'STUDENÁ VODA',
+    open: 'otevřený', closed: 'zavřený', unavailable: 'nedostupný', valve: 'ventil', valve_q: 'VENTIL ?',
+    valve_unavailable: 'ventil nedostupný', el_badge: '⚡ elektřina',
+    na: 'nedostupné', na_txt: 'Teplotní senzory jsou nedostupné',
+    bad: 'bojler topí radiátory',
+    bad_txt: (tin, tb) => `Ventil je otevřený, ale voda z topení (${tin}) je chladnější než bojler (${tb}). Bojler ohřívá radiátory.`,
+    tuv: 'ohřev z topení', tuv_txt: d => 'Topení ohřívá bojler' + (d !== null ? ` · výměník předává ${d.toFixed(1)}°` : ''),
+    ready: 'topení je teplé', ready_txt: d => `Přívod je o ${d.toFixed(1)}° teplejší než bojler, ventil by mohl otevřít`,
+    el: 'elektrický ohřev', el_txt: colder => `Ohřívá elektřina · topení je ${colder ? 'chladnější než bojler' : 'málo teplé'}`,
+    idle: 'pohotovost',
+    idle_txt: d => d === null ? 'Ventil zavřený' : `Ventil zavřený · přívod je ${d >= 0 ? 'jen o ' + d.toFixed(1) + '° teplejší' : 'o ' + (-d).toFixed(1) + '° chladnější'} než bojler`,
+    s_sup: 'přívod − bojler', s_coil: 'výměník Δ', s_el: 'elektřina', el_on: 'zapnutá', el_off: 'vypnutá',
+    coil_only_open: 'jen při otevřeném ventilu',
+    just_now: 'právě',
+    hist: 'HISTORIE', hist_now: 'teď', c_heat: 'ohřev z topení', c_el: 'elektřina', c_kwh: 'spotřeba elektřiny',
+    c_rev: 'bojler topil radiátory', h_heat: 'topení', h_el: 'elektřina', h_valve: 'ventil', h_element: 'spirála',
+    loading: 'Načítám historii…', hist_err: 'Historie není dostupná: ',
+    pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
+  },
+  en: {
+    title: 'Boiler', BOILER: 'BOILER', boiler: 'boiler',
+    supply: 'SUPPLY', coil_in: 'TO BOILER', coil_out: 'RETURN',
+    hot_water: 'HOT WATER', cold_water: 'COLD WATER',
+    open: 'open', closed: 'closed', unavailable: 'unavailable', valve: 'valve', valve_q: 'VALVE ?',
+    valve_unavailable: 'valve unavailable', el_badge: '⚡ electric',
+    na: 'unavailable', na_txt: 'Temperature sensors are unavailable',
+    bad: 'boiler heats radiators',
+    bad_txt: (tin, tb) => `The valve is open, but the heating water (${tin}) is colder than the boiler (${tb}). The boiler is heating the radiators.`,
+    tuv: 'heated by heating', tuv_txt: d => 'The heating is warming the boiler' + (d !== null ? ` · the coil passes on ${d.toFixed(1)}°` : ''),
+    ready: 'heating is warm', ready_txt: d => `The supply is ${d.toFixed(1)}° warmer than the boiler, the valve could open`,
+    el: 'electric heating', el_txt: colder => `Electricity is heating · the heating water is ${colder ? 'colder than the boiler' : 'not warm enough'}`,
+    idle: 'standby',
+    idle_txt: d => d === null ? 'Valve closed' : `Valve closed · the supply is ${d >= 0 ? 'only ' + d.toFixed(1) + '° warmer' : (-d).toFixed(1) + '° colder'} than the boiler`,
+    s_sup: 'supply − boiler', s_coil: 'coil Δ', s_el: 'electricity', el_on: 'on', el_off: 'off',
+    coil_only_open: 'only while the valve is open',
+    just_now: 'now',
+    hist: 'HISTORY', hist_now: 'now', c_heat: 'heated by heating', c_el: 'electricity', c_kwh: 'electricity used',
+    c_rev: 'boiler heated radiators', h_heat: 'heating', h_el: 'electricity', h_valve: 'valve', h_element: 'element',
+    loading: 'Loading history…', hist_err: 'History is not available: ',
+    pick: 'Pick the boiler temperature and the valve in the card editor.',
+  },
+};
+const i18nLang = (language, haLang) => {
+  const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);
+  return I18N[l] ? l : 'en';
+};
+// custom label if the user set one, otherwise the default of the current language
+// (a saved default from any language counts as "not set", so switching language translates it)
+const i18nText = (cfg, key, cfgKey) => {
+  const v = cfg[cfgKey], T = I18N[cfg.lang || 'sk'];
+  return v && !Object.values(I18N).some(t => t[key] === v) ? v : T[key];
+};
 
+
+const LANG = C.lang || i18nLang(C.language, typeof hass !== 'undefined' && hass ? hass.language : '');
+const T = I18N[LANG], CL = { ...C, lang: LANG };
+const lbl = k => i18nText(CL, k, 'label_' + k);
+const TITLE = i18nText(CL, 'title', 'title');
 const U = C.uid || 'bt';  // constant: each button-card has its own shadow root
 const ok = s => s && !['unknown','unavailable'].includes(s.state);
 const num = id => { if (!id) return null; const s = states[id]; if (!ok(s)) return null; const v = parseFloat(s.state); return isNaN(v) ? null : v; };
@@ -155,7 +239,7 @@ const sg = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.a
 const ago = ts => {
   if (!ts) return '';
   const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
-  return m < 1 ? 'práve' : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`;
+  return m < 1 ? T.just_now : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`;
 };
 const mi = id => id ? `class="bt-click" onclick="event.stopPropagation();this.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:'${id}'}}))"` : '';
 const tint = (c, p) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
@@ -179,23 +263,23 @@ const dCoil = t2 !== null && t3 !== null ? t2 - t3 : null;
 const SUC = 'var(--success-color, #43a047)', ERR = 'var(--error-color, #db4437)', WRN = 'var(--warning-color, #ffa600)';
 const INF = 'var(--info-color, #039be5)', SEC = 'var(--secondary-text-color, #727272)';
 let st;
-if (tb === null || tin === null) st = { k: 'na', c: SEC, icon: 'mdi:lan-disconnect', label: 'nedostupné', txt: 'Teplotné senzory sú nedostupné' };
-else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert', label: 'bojler kúri radiátory', txt: `Ventil je otvorený, ale voda z kúrenia (${f(tin)}) je chladnejšia ako bojler (${f(tb)}). Bojler ohrieva radiátory.` };
-else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: 'ohrev z kúrenia', txt: `Kúrenie ohrieva bojler` + (dCoil !== null ? ` · výmenník odovzdáva ${dCoil.toFixed(1)}°` : '') };
-else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: 'kúrenie je teplé', txt: `Prívod je o ${dSup.toFixed(1)}° teplejší ako bojler, ventil by mohol otvoriť` };
-else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: 'elektrický ohrev', txt: `Ohrieva elektrina · kúrenie je ${dSup !== null && dSup < 0 ? 'chladnejšie ako bojler' : 'málo teplé'}` };
-else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: 'pohotovosť', txt: dSup === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${dSup >= 0 ? 'len o ' + dSup.toFixed(1) + '° teplejší' : 'o ' + (-dSup).toFixed(1) + '° chladnejší'} ako bojler` };
+if (tb === null || tin === null) st = { k: 'na', c: SEC, icon: 'mdi:lan-disconnect', label: T.na, txt: T.na_txt };
+else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert', label: T.bad, txt: T.bad_txt(f(tin), f(tb)) };
+else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
+else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
+else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
 const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
-if (!vOk) pills += pill('ventil nedostupný', SEC);
-if (heating && st.k !== 'el') pills += pill('⚡ elektrina', WRN);
+if (!vOk) pills += pill(T.valve_unavailable, SEC);
+if (heating && st.k !== 'el') pills += pill(T.el_badge, WRN);
 pills += pill(st.label, st.c);
 
 
 const cB = tc(tb), c1 = tc(t1), c2 = tc(t2), c3 = tc(t3);
 const vCol = !vOk ? SEC : open ? SUC : SEC;
-const vTxt = !vOk ? 'nedostupný' : open ? 'otvorený' : 'zatvorený';
+const vTxt = !vOk ? T.unavailable : open ? T.open : T.closed;
 const dCol = !open || dCoil === null ? SEC : dCoil >= 0 ? SUC : ERR;
 const supCol = dSup === null ? SEC : dSup >= C.min_delta ? SUC : dSup >= 0 ? WRN : ERR;
 const flowCol = st.k === 'bad' ? ERR : '#fff';
@@ -215,7 +299,7 @@ const STYLE = `
 const header = (extra = '') => `
   <div style="display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--divider-color)">
     <ha-icon icon="mdi:water-boiler" style="--mdc-icon-size:18px;color:${st.c};flex-shrink:0"></ha-icon>
-    <span style="font-size:15px;font-weight:500">${C.title}</span>${extra}
+    <span style="font-size:15px;font-weight:500">${TITLE}</span>${extra}
     <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${pills}</span>
   </div>`;
 const banner = () => `
@@ -251,14 +335,14 @@ const svg = `
 
   <!-- hot / cold water -->
   <path d="M266 18 V8 H392" style="fill:none;stroke:${cB};stroke-width:5;stroke-linecap:round;stroke-opacity:.55"/>
-  <text x="392" y="24" text-anchor="end" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">TEPLÁ VODA</text>
+  <text x="392" y="24" text-anchor="end" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">${T.hot_water}</text>
   <path d="M266 226 V236 H392" style="fill:none;stroke:${tc(C.cold)};stroke-width:5;stroke-linecap:round;stroke-opacity:.7"/>
-  <text x="392" y="228" text-anchor="end" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">STUDENÁ VODA</text>
+  <text x="392" y="228" text-anchor="end" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${SEC}">${T.cold_water}</text>
 
   <!-- tank -->
   <g ${mi(C.boiler)}>
     <rect x="${WALL}" y="18" width="104" height="208" rx="40" style="fill:url(#w${U});fill-opacity:.2;stroke:${st.k === 'bad' ? ERR : SEC};stroke-opacity:${st.k === 'bad' ? 1 : .35};stroke-width:3"/>
-    <text x="266" y="62" text-anchor="middle" style="font-size:9px;letter-spacing:1.5px;font-weight:600;fill:${SEC}">BOJLER</text>
+    <text x="266" y="62" text-anchor="middle" style="font-size:9px;letter-spacing:1.5px;font-weight:600;fill:${SEC}">${T.BOILER}</text>
     <text x="266" y="96" text-anchor="middle" style="font-size:30px;font-weight:500;fill:${cB};font-variant-numeric:tabular-nums">${tb === null ? '—' : tb.toFixed(1)}<tspan style="font-size:16px" dy="-11">°C</tspan></text>
   </g>
 
@@ -290,13 +374,13 @@ const svg = `
     <rect x="${VX - 9}" y="94" width="18" height="12" rx="2.5" style="fill:${vCol};fill-opacity:${open ? 1 : .55}"/>
     <rect x="${VX - 1}" y="106" width="2" height="9" style="fill:${vCol}"/>
     <path d="M${VX - 12} 114 L${VX} ${SY} L${VX - 12} 134 Z M${VX + 12} 114 L${VX} ${SY} L${VX + 12} 134 Z" style="fill:${vCol};fill-opacity:${open ? 1 : .55};stroke:${CARD_BG};stroke-width:1.5;stroke-linejoin:round"/>
-    <text x="${VX}" y="151" text-anchor="middle" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${vCol}">${!vOk ? 'VENTIL ?' : open ? 'OTVORENÝ' : 'ZATVORENÝ'}</text>
+    <text x="${VX}" y="151" text-anchor="middle" style="font-size:8.5px;letter-spacing:1px;font-weight:600;fill:${vCol}">${!vOk ? T.valve_q : vTxt.toUpperCase()}</text>
   </g>
 
-  ${tBadge(52, SY, t1, C.supply, C.label_supply, 105)}
-  ${tBadge(TX, SY, t2, C.coil_in, C.label_coil_in, 105)}
-  ${tBadge(TX, RY, t3, C.coil_out, C.label_coil_out, 193)}
-  ${open ? `<text x="${TX}" y="149" text-anchor="middle" style="font-size:10px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums"><title>${C.label_coil_in.toLowerCase()} ${f(t2)} − ${C.label_coil_out.toLowerCase()} ${f(t3)}</title>Δ ${sg(dCoil)}</text>` : ''}
+  ${tBadge(52, SY, t1, C.supply, lbl('supply'), 105)}
+  ${tBadge(TX, SY, t2, C.coil_in, lbl('coil_in'), 105)}
+  ${tBadge(TX, RY, t3, C.coil_out, lbl('coil_out'), 193)}
+  ${open ? `<text x="${TX}" y="149" text-anchor="middle" style="font-size:10px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums"><title>${lbl('coil_in').toLowerCase()} ${f(t2)} − ${lbl('coil_out').toLowerCase()} ${f(t3)}</title>Δ ${sg(dCoil)}</text>` : ''}
 </svg>`;
 
 // ---------- stats ----------
@@ -305,14 +389,14 @@ const cell = (label, val, col, id, tip = '') => `
     <div style="font-size:11px;color:${SEC};white-space:nowrap">${label}</div>
     <div style="font-size:15px;font-weight:500;color:${col};white-space:nowrap;font-variant-numeric:tabular-nums">${val}</div>
   </div>`;
-let cells = cell('bojler', f(tb), cB, C.boiler)
-  + cell('prívod − bojler', sg(dSup), supCol, C.supply, `${C.label_supply.toLowerCase()} ${f(t1)} − bojler ${f(tb)}`)
+let cells = cell(T.boiler, f(tb), cB, C.boiler)
+  + cell(T.s_sup, sg(dSup), supCol, C.supply, `${lbl('supply').toLowerCase()} ${f(t1)} − ${T.boiler} ${f(tb)}`)
   // with the valve closed the water in the coil stands still, so in − out says nothing
-  + cell('výmenník Δ', open ? sg(dCoil) : '—', dCol, C.coil_in,
-    open ? `${C.label_coil_in.toLowerCase()} ${f(t2)} − ${C.label_coil_out.toLowerCase()} ${f(t3)}` : 'len pri otvorenom ventile')
-  + cell(vOk ? `ventil · ${ago(vS.last_changed)}` : 'ventil', vTxt, vCol, C.valve);
-if (pw !== null) cells += cell('elektrina', pwTxt, heating ? WRN : SEC, C.heater_power, C.heater_power);
-else if (C.heater) cells += cell('elektrina', heating ? 'zapnutá' : 'vypnutá', heating ? WRN : SEC, C.heater);
+  + cell(T.s_coil, open ? sg(dCoil) : '—', dCol, C.coil_in,
+    open ? `${lbl('coil_in').toLowerCase()} ${f(t2)} − ${lbl('coil_out').toLowerCase()} ${f(t3)}` : T.coil_only_open)
+  + cell(vOk ? `${T.valve} · ${ago(vS.last_changed)}` : T.valve, vTxt, vCol, C.valve);
+if (pw !== null) cells += cell(T.s_el, pwTxt, heating ? WRN : SEC, C.heater_power, C.heater_power);
+else if (C.heater) cells += cell(T.s_el, heating ? T.el_on : T.el_off, heating ? WRN : SEC, C.heater);
 
 return wrap(`
   ${C.show_header !== false ? header() : ''}
@@ -322,7 +406,91 @@ return wrap(`
 
 }
 function renderB(states, C) {
+// ---------- translations (language: auto = Home Assistant's language, sk, cs, en) ----------
+const I18N = {
+  sk: {
+    title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
+    supply: 'PRÍVOD', coil_in: 'DO BOJLERA', coil_out: 'SPIATOČKA',
+    hot_water: 'TEPLÁ VODA', cold_water: 'STUDENÁ VODA',
+    open: 'otvorený', closed: 'zatvorený', unavailable: 'nedostupný', valve: 'ventil', valve_q: 'VENTIL ?',
+    valve_unavailable: 'ventil nedostupný', el_badge: '⚡ elektrina',
+    na: 'nedostupné', na_txt: 'Teplotné senzory sú nedostupné',
+    bad: 'bojler kúri radiátory',
+    bad_txt: (tin, tb) => `Ventil je otvorený, ale voda z kúrenia (${tin}) je chladnejšia ako bojler (${tb}). Bojler ohrieva radiátory.`,
+    tuv: 'ohrev z kúrenia', tuv_txt: d => 'Kúrenie ohrieva bojler' + (d !== null ? ` · výmenník odovzdáva ${d.toFixed(1)}°` : ''),
+    ready: 'kúrenie je teplé', ready_txt: d => `Prívod je o ${d.toFixed(1)}° teplejší ako bojler, ventil by mohol otvoriť`,
+    el: 'elektrický ohrev', el_txt: colder => `Ohrieva elektrina · kúrenie je ${colder ? 'chladnejšie ako bojler' : 'málo teplé'}`,
+    idle: 'pohotovosť',
+    idle_txt: d => d === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${d >= 0 ? 'len o ' + d.toFixed(1) + '° teplejší' : 'o ' + (-d).toFixed(1) + '° chladnejší'} ako bojler`,
+    s_sup: 'prívod − bojler', s_coil: 'výmenník Δ', s_el: 'elektrina', el_on: 'zapnutá', el_off: 'vypnutá',
+    coil_only_open: 'len pri otvorenom ventile',
+    just_now: 'práve',
+    hist: 'HISTÓRIA', hist_now: 'teraz', c_heat: 'ohrev z kúrenia', c_el: 'elektrina', c_kwh: 'spotreba elektriny',
+    c_rev: 'bojler kúril radiátory', h_heat: 'kúrenie', h_el: 'elektrina', h_valve: 'ventil', h_element: 'špirála',
+    loading: 'Načítavam históriu…', hist_err: 'História nie je dostupná: ',
+    pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
+  },
+  cs: {
+    title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
+    supply: 'PŘÍVOD', coil_in: 'DO BOJLERU', coil_out: 'ZPÁTEČKA',
+    hot_water: 'TEPLÁ VODA', cold_water: 'STUDENÁ VODA',
+    open: 'otevřený', closed: 'zavřený', unavailable: 'nedostupný', valve: 'ventil', valve_q: 'VENTIL ?',
+    valve_unavailable: 'ventil nedostupný', el_badge: '⚡ elektřina',
+    na: 'nedostupné', na_txt: 'Teplotní senzory jsou nedostupné',
+    bad: 'bojler topí radiátory',
+    bad_txt: (tin, tb) => `Ventil je otevřený, ale voda z topení (${tin}) je chladnější než bojler (${tb}). Bojler ohřívá radiátory.`,
+    tuv: 'ohřev z topení', tuv_txt: d => 'Topení ohřívá bojler' + (d !== null ? ` · výměník předává ${d.toFixed(1)}°` : ''),
+    ready: 'topení je teplé', ready_txt: d => `Přívod je o ${d.toFixed(1)}° teplejší než bojler, ventil by mohl otevřít`,
+    el: 'elektrický ohřev', el_txt: colder => `Ohřívá elektřina · topení je ${colder ? 'chladnější než bojler' : 'málo teplé'}`,
+    idle: 'pohotovost',
+    idle_txt: d => d === null ? 'Ventil zavřený' : `Ventil zavřený · přívod je ${d >= 0 ? 'jen o ' + d.toFixed(1) + '° teplejší' : 'o ' + (-d).toFixed(1) + '° chladnější'} než bojler`,
+    s_sup: 'přívod − bojler', s_coil: 'výměník Δ', s_el: 'elektřina', el_on: 'zapnutá', el_off: 'vypnutá',
+    coil_only_open: 'jen při otevřeném ventilu',
+    just_now: 'právě',
+    hist: 'HISTORIE', hist_now: 'teď', c_heat: 'ohřev z topení', c_el: 'elektřina', c_kwh: 'spotřeba elektřiny',
+    c_rev: 'bojler topil radiátory', h_heat: 'topení', h_el: 'elektřina', h_valve: 'ventil', h_element: 'spirála',
+    loading: 'Načítám historii…', hist_err: 'Historie není dostupná: ',
+    pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
+  },
+  en: {
+    title: 'Boiler', BOILER: 'BOILER', boiler: 'boiler',
+    supply: 'SUPPLY', coil_in: 'TO BOILER', coil_out: 'RETURN',
+    hot_water: 'HOT WATER', cold_water: 'COLD WATER',
+    open: 'open', closed: 'closed', unavailable: 'unavailable', valve: 'valve', valve_q: 'VALVE ?',
+    valve_unavailable: 'valve unavailable', el_badge: '⚡ electric',
+    na: 'unavailable', na_txt: 'Temperature sensors are unavailable',
+    bad: 'boiler heats radiators',
+    bad_txt: (tin, tb) => `The valve is open, but the heating water (${tin}) is colder than the boiler (${tb}). The boiler is heating the radiators.`,
+    tuv: 'heated by heating', tuv_txt: d => 'The heating is warming the boiler' + (d !== null ? ` · the coil passes on ${d.toFixed(1)}°` : ''),
+    ready: 'heating is warm', ready_txt: d => `The supply is ${d.toFixed(1)}° warmer than the boiler, the valve could open`,
+    el: 'electric heating', el_txt: colder => `Electricity is heating · the heating water is ${colder ? 'colder than the boiler' : 'not warm enough'}`,
+    idle: 'standby',
+    idle_txt: d => d === null ? 'Valve closed' : `Valve closed · the supply is ${d >= 0 ? 'only ' + d.toFixed(1) + '° warmer' : (-d).toFixed(1) + '° colder'} than the boiler`,
+    s_sup: 'supply − boiler', s_coil: 'coil Δ', s_el: 'electricity', el_on: 'on', el_off: 'off',
+    coil_only_open: 'only while the valve is open',
+    just_now: 'now',
+    hist: 'HISTORY', hist_now: 'now', c_heat: 'heated by heating', c_el: 'electricity', c_kwh: 'electricity used',
+    c_rev: 'boiler heated radiators', h_heat: 'heating', h_el: 'electricity', h_valve: 'valve', h_element: 'element',
+    loading: 'Loading history…', hist_err: 'History is not available: ',
+    pick: 'Pick the boiler temperature and the valve in the card editor.',
+  },
+};
+const i18nLang = (language, haLang) => {
+  const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);
+  return I18N[l] ? l : 'en';
+};
+// custom label if the user set one, otherwise the default of the current language
+// (a saved default from any language counts as "not set", so switching language translates it)
+const i18nText = (cfg, key, cfgKey) => {
+  const v = cfg[cfgKey], T = I18N[cfg.lang || 'sk'];
+  return v && !Object.values(I18N).some(t => t[key] === v) ? v : T[key];
+};
 
+
+const LANG = C.lang || i18nLang(C.language, typeof hass !== 'undefined' && hass ? hass.language : '');
+const T = I18N[LANG], CL = { ...C, lang: LANG };
+const lbl = k => i18nText(CL, k, 'label_' + k);
+const TITLE = i18nText(CL, 'title', 'title');
 const U = C.uid || 'bt';  // constant: each button-card has its own shadow root
 const ok = s => s && !['unknown','unavailable'].includes(s.state);
 const num = id => { if (!id) return null; const s = states[id]; if (!ok(s)) return null; const v = parseFloat(s.state); return isNaN(v) ? null : v; };
@@ -352,7 +520,7 @@ const sg = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.a
 const ago = ts => {
   if (!ts) return '';
   const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
-  return m < 1 ? 'práve' : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`;
+  return m < 1 ? T.just_now : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`;
 };
 const mi = id => id ? `class="bt-click" onclick="event.stopPropagation();this.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:'${id}'}}))"` : '';
 const tint = (c, p) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
@@ -376,23 +544,23 @@ const dCoil = t2 !== null && t3 !== null ? t2 - t3 : null;
 const SUC = 'var(--success-color, #43a047)', ERR = 'var(--error-color, #db4437)', WRN = 'var(--warning-color, #ffa600)';
 const INF = 'var(--info-color, #039be5)', SEC = 'var(--secondary-text-color, #727272)';
 let st;
-if (tb === null || tin === null) st = { k: 'na', c: SEC, icon: 'mdi:lan-disconnect', label: 'nedostupné', txt: 'Teplotné senzory sú nedostupné' };
-else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert', label: 'bojler kúri radiátory', txt: `Ventil je otvorený, ale voda z kúrenia (${f(tin)}) je chladnejšia ako bojler (${f(tb)}). Bojler ohrieva radiátory.` };
-else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: 'ohrev z kúrenia', txt: `Kúrenie ohrieva bojler` + (dCoil !== null ? ` · výmenník odovzdáva ${dCoil.toFixed(1)}°` : '') };
-else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: 'kúrenie je teplé', txt: `Prívod je o ${dSup.toFixed(1)}° teplejší ako bojler, ventil by mohol otvoriť` };
-else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: 'elektrický ohrev', txt: `Ohrieva elektrina · kúrenie je ${dSup !== null && dSup < 0 ? 'chladnejšie ako bojler' : 'málo teplé'}` };
-else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: 'pohotovosť', txt: dSup === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${dSup >= 0 ? 'len o ' + dSup.toFixed(1) + '° teplejší' : 'o ' + (-dSup).toFixed(1) + '° chladnejší'} ako bojler` };
+if (tb === null || tin === null) st = { k: 'na', c: SEC, icon: 'mdi:lan-disconnect', label: T.na, txt: T.na_txt };
+else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert', label: T.bad, txt: T.bad_txt(f(tin), f(tb)) };
+else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
+else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
+else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
 const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
-if (!vOk) pills += pill('ventil nedostupný', SEC);
-if (heating && st.k !== 'el') pills += pill('⚡ elektrina', WRN);
+if (!vOk) pills += pill(T.valve_unavailable, SEC);
+if (heating && st.k !== 'el') pills += pill(T.el_badge, WRN);
 pills += pill(st.label, st.c);
 
 
 const cB = tc(tb), c1 = tc(t1), c2 = tc(t2), c3 = tc(t3);
 const vCol = !vOk ? SEC : open ? SUC : SEC;
-const vTxt = !vOk ? 'nedostupný' : open ? 'otvorený' : 'zatvorený';
+const vTxt = !vOk ? T.unavailable : open ? T.open : T.closed;
 const dCol = !open || dCoil === null ? SEC : dCoil >= 0 ? SUC : ERR;
 const supCol = dSup === null ? SEC : dSup >= C.min_delta ? SUC : dSup >= 0 ? WRN : ERR;
 const flowCol = st.k === 'bad' ? ERR : '#fff';
@@ -412,7 +580,7 @@ const STYLE = `
 const header = (extra = '') => `
   <div style="display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--divider-color)">
     <ha-icon icon="mdi:water-boiler" style="--mdc-icon-size:18px;color:${st.c};flex-shrink:0"></ha-icon>
-    <span style="font-size:15px;font-weight:500">${C.title}</span>${extra}
+    <span style="font-size:15px;font-weight:500">${TITLE}</span>${extra}
     <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${pills}</span>
   </div>`;
 const banner = () => `
@@ -481,17 +649,101 @@ return wrap(`
   </div>
   <div>
     <div style="display:grid;${COLS};font-size:9px;color:${SEC};padding-bottom:2px"><span></span><span></span><span style="text-align:right">°C</span><span style="text-align:right">Δ bojler</span></div>
-    ${row(C.label_supply, t1, C.supply)}
+    ${row(lbl('supply'), t1, C.supply)}
     ${valveRow}
-    ${row(C.label_coil_in, t2, C.coil_in)}
-    ${row(C.label_coil_out, t3, C.coil_out)}
+    ${row(lbl('coil_in'), t2, C.coil_in)}
+    ${row(lbl('coil_out'), t3, C.coil_out)}
     <div style="display:grid;${COLS};font-size:9px;color:${SEC};padding-top:4px"><span></span><span style="position:relative;height:12px">${ticks}</span><span></span><span></span></div>
   </div>
   ${banner()}`);
 
 }
 function renderC(states, C) {
+// ---------- translations (language: auto = Home Assistant's language, sk, cs, en) ----------
+const I18N = {
+  sk: {
+    title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
+    supply: 'PRÍVOD', coil_in: 'DO BOJLERA', coil_out: 'SPIATOČKA',
+    hot_water: 'TEPLÁ VODA', cold_water: 'STUDENÁ VODA',
+    open: 'otvorený', closed: 'zatvorený', unavailable: 'nedostupný', valve: 'ventil', valve_q: 'VENTIL ?',
+    valve_unavailable: 'ventil nedostupný', el_badge: '⚡ elektrina',
+    na: 'nedostupné', na_txt: 'Teplotné senzory sú nedostupné',
+    bad: 'bojler kúri radiátory',
+    bad_txt: (tin, tb) => `Ventil je otvorený, ale voda z kúrenia (${tin}) je chladnejšia ako bojler (${tb}). Bojler ohrieva radiátory.`,
+    tuv: 'ohrev z kúrenia', tuv_txt: d => 'Kúrenie ohrieva bojler' + (d !== null ? ` · výmenník odovzdáva ${d.toFixed(1)}°` : ''),
+    ready: 'kúrenie je teplé', ready_txt: d => `Prívod je o ${d.toFixed(1)}° teplejší ako bojler, ventil by mohol otvoriť`,
+    el: 'elektrický ohrev', el_txt: colder => `Ohrieva elektrina · kúrenie je ${colder ? 'chladnejšie ako bojler' : 'málo teplé'}`,
+    idle: 'pohotovosť',
+    idle_txt: d => d === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${d >= 0 ? 'len o ' + d.toFixed(1) + '° teplejší' : 'o ' + (-d).toFixed(1) + '° chladnejší'} ako bojler`,
+    s_sup: 'prívod − bojler', s_coil: 'výmenník Δ', s_el: 'elektrina', el_on: 'zapnutá', el_off: 'vypnutá',
+    coil_only_open: 'len pri otvorenom ventile',
+    just_now: 'práve',
+    hist: 'HISTÓRIA', hist_now: 'teraz', c_heat: 'ohrev z kúrenia', c_el: 'elektrina', c_kwh: 'spotreba elektriny',
+    c_rev: 'bojler kúril radiátory', h_heat: 'kúrenie', h_el: 'elektrina', h_valve: 'ventil', h_element: 'špirála',
+    loading: 'Načítavam históriu…', hist_err: 'História nie je dostupná: ',
+    pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
+  },
+  cs: {
+    title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
+    supply: 'PŘÍVOD', coil_in: 'DO BOJLERU', coil_out: 'ZPÁTEČKA',
+    hot_water: 'TEPLÁ VODA', cold_water: 'STUDENÁ VODA',
+    open: 'otevřený', closed: 'zavřený', unavailable: 'nedostupný', valve: 'ventil', valve_q: 'VENTIL ?',
+    valve_unavailable: 'ventil nedostupný', el_badge: '⚡ elektřina',
+    na: 'nedostupné', na_txt: 'Teplotní senzory jsou nedostupné',
+    bad: 'bojler topí radiátory',
+    bad_txt: (tin, tb) => `Ventil je otevřený, ale voda z topení (${tin}) je chladnější než bojler (${tb}). Bojler ohřívá radiátory.`,
+    tuv: 'ohřev z topení', tuv_txt: d => 'Topení ohřívá bojler' + (d !== null ? ` · výměník předává ${d.toFixed(1)}°` : ''),
+    ready: 'topení je teplé', ready_txt: d => `Přívod je o ${d.toFixed(1)}° teplejší než bojler, ventil by mohl otevřít`,
+    el: 'elektrický ohřev', el_txt: colder => `Ohřívá elektřina · topení je ${colder ? 'chladnější než bojler' : 'málo teplé'}`,
+    idle: 'pohotovost',
+    idle_txt: d => d === null ? 'Ventil zavřený' : `Ventil zavřený · přívod je ${d >= 0 ? 'jen o ' + d.toFixed(1) + '° teplejší' : 'o ' + (-d).toFixed(1) + '° chladnější'} než bojler`,
+    s_sup: 'přívod − bojler', s_coil: 'výměník Δ', s_el: 'elektřina', el_on: 'zapnutá', el_off: 'vypnutá',
+    coil_only_open: 'jen při otevřeném ventilu',
+    just_now: 'právě',
+    hist: 'HISTORIE', hist_now: 'teď', c_heat: 'ohřev z topení', c_el: 'elektřina', c_kwh: 'spotřeba elektřiny',
+    c_rev: 'bojler topil radiátory', h_heat: 'topení', h_el: 'elektřina', h_valve: 'ventil', h_element: 'spirála',
+    loading: 'Načítám historii…', hist_err: 'Historie není dostupná: ',
+    pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
+  },
+  en: {
+    title: 'Boiler', BOILER: 'BOILER', boiler: 'boiler',
+    supply: 'SUPPLY', coil_in: 'TO BOILER', coil_out: 'RETURN',
+    hot_water: 'HOT WATER', cold_water: 'COLD WATER',
+    open: 'open', closed: 'closed', unavailable: 'unavailable', valve: 'valve', valve_q: 'VALVE ?',
+    valve_unavailable: 'valve unavailable', el_badge: '⚡ electric',
+    na: 'unavailable', na_txt: 'Temperature sensors are unavailable',
+    bad: 'boiler heats radiators',
+    bad_txt: (tin, tb) => `The valve is open, but the heating water (${tin}) is colder than the boiler (${tb}). The boiler is heating the radiators.`,
+    tuv: 'heated by heating', tuv_txt: d => 'The heating is warming the boiler' + (d !== null ? ` · the coil passes on ${d.toFixed(1)}°` : ''),
+    ready: 'heating is warm', ready_txt: d => `The supply is ${d.toFixed(1)}° warmer than the boiler, the valve could open`,
+    el: 'electric heating', el_txt: colder => `Electricity is heating · the heating water is ${colder ? 'colder than the boiler' : 'not warm enough'}`,
+    idle: 'standby',
+    idle_txt: d => d === null ? 'Valve closed' : `Valve closed · the supply is ${d >= 0 ? 'only ' + d.toFixed(1) + '° warmer' : (-d).toFixed(1) + '° colder'} than the boiler`,
+    s_sup: 'supply − boiler', s_coil: 'coil Δ', s_el: 'electricity', el_on: 'on', el_off: 'off',
+    coil_only_open: 'only while the valve is open',
+    just_now: 'now',
+    hist: 'HISTORY', hist_now: 'now', c_heat: 'heated by heating', c_el: 'electricity', c_kwh: 'electricity used',
+    c_rev: 'boiler heated radiators', h_heat: 'heating', h_el: 'electricity', h_valve: 'valve', h_element: 'element',
+    loading: 'Loading history…', hist_err: 'History is not available: ',
+    pick: 'Pick the boiler temperature and the valve in the card editor.',
+  },
+};
+const i18nLang = (language, haLang) => {
+  const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);
+  return I18N[l] ? l : 'en';
+};
+// custom label if the user set one, otherwise the default of the current language
+// (a saved default from any language counts as "not set", so switching language translates it)
+const i18nText = (cfg, key, cfgKey) => {
+  const v = cfg[cfgKey], T = I18N[cfg.lang || 'sk'];
+  return v && !Object.values(I18N).some(t => t[key] === v) ? v : T[key];
+};
 
+
+const LANG = C.lang || i18nLang(C.language, typeof hass !== 'undefined' && hass ? hass.language : '');
+const T = I18N[LANG], CL = { ...C, lang: LANG };
+const lbl = k => i18nText(CL, k, 'label_' + k);
+const TITLE = i18nText(CL, 'title', 'title');
 const U = C.uid || 'bt';  // constant: each button-card has its own shadow root
 const ok = s => s && !['unknown','unavailable'].includes(s.state);
 const num = id => { if (!id) return null; const s = states[id]; if (!ok(s)) return null; const v = parseFloat(s.state); return isNaN(v) ? null : v; };
@@ -521,7 +773,7 @@ const sg = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.a
 const ago = ts => {
   if (!ts) return '';
   const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
-  return m < 1 ? 'práve' : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`;
+  return m < 1 ? T.just_now : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`;
 };
 const mi = id => id ? `class="bt-click" onclick="event.stopPropagation();this.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:'${id}'}}))"` : '';
 const tint = (c, p) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
@@ -545,23 +797,23 @@ const dCoil = t2 !== null && t3 !== null ? t2 - t3 : null;
 const SUC = 'var(--success-color, #43a047)', ERR = 'var(--error-color, #db4437)', WRN = 'var(--warning-color, #ffa600)';
 const INF = 'var(--info-color, #039be5)', SEC = 'var(--secondary-text-color, #727272)';
 let st;
-if (tb === null || tin === null) st = { k: 'na', c: SEC, icon: 'mdi:lan-disconnect', label: 'nedostupné', txt: 'Teplotné senzory sú nedostupné' };
-else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert', label: 'bojler kúri radiátory', txt: `Ventil je otvorený, ale voda z kúrenia (${f(tin)}) je chladnejšia ako bojler (${f(tb)}). Bojler ohrieva radiátory.` };
-else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: 'ohrev z kúrenia', txt: `Kúrenie ohrieva bojler` + (dCoil !== null ? ` · výmenník odovzdáva ${dCoil.toFixed(1)}°` : '') };
-else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: 'kúrenie je teplé', txt: `Prívod je o ${dSup.toFixed(1)}° teplejší ako bojler, ventil by mohol otvoriť` };
-else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: 'elektrický ohrev', txt: `Ohrieva elektrina · kúrenie je ${dSup !== null && dSup < 0 ? 'chladnejšie ako bojler' : 'málo teplé'}` };
-else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: 'pohotovosť', txt: dSup === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${dSup >= 0 ? 'len o ' + dSup.toFixed(1) + '° teplejší' : 'o ' + (-dSup).toFixed(1) + '° chladnejší'} ako bojler` };
+if (tb === null || tin === null) st = { k: 'na', c: SEC, icon: 'mdi:lan-disconnect', label: T.na, txt: T.na_txt };
+else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert', label: T.bad, txt: T.bad_txt(f(tin), f(tb)) };
+else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
+else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
+else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
 const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
-if (!vOk) pills += pill('ventil nedostupný', SEC);
-if (heating && st.k !== 'el') pills += pill('⚡ elektrina', WRN);
+if (!vOk) pills += pill(T.valve_unavailable, SEC);
+if (heating && st.k !== 'el') pills += pill(T.el_badge, WRN);
 pills += pill(st.label, st.c);
 
 
 const cB = tc(tb), c1 = tc(t1), c2 = tc(t2), c3 = tc(t3);
 const vCol = !vOk ? SEC : open ? SUC : SEC;
-const vTxt = !vOk ? 'nedostupný' : open ? 'otvorený' : 'zatvorený';
+const vTxt = !vOk ? T.unavailable : open ? T.open : T.closed;
 const dCol = !open || dCoil === null ? SEC : dCoil >= 0 ? SUC : ERR;
 const supCol = dSup === null ? SEC : dSup >= C.min_delta ? SUC : dSup >= 0 ? WRN : ERR;
 const flowCol = st.k === 'bad' ? ERR : '#fff';
@@ -581,7 +833,7 @@ const STYLE = `
 const header = (extra = '') => `
   <div style="display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--divider-color)">
     <ha-icon icon="mdi:water-boiler" style="--mdc-icon-size:18px;color:${st.c};flex-shrink:0"></ha-icon>
-    <span style="font-size:15px;font-weight:500">${C.title}</span>${extra}
+    <span style="font-size:15px;font-weight:500">${TITLE}</span>${extra}
     <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${pills}</span>
   </div>`;
 const banner = () => `
@@ -647,9 +899,9 @@ const pipe = `
     <path d="M${PV - 12} ${PY - 10} L${PV} ${PY} L${PV - 12} ${PY + 10} Z M${PV + 12} ${PY - 10} L${PV} ${PY} L${PV + 12} ${PY + 10} Z" style="fill:${vCol};fill-opacity:${open ? 1 : .55};stroke:${CARD_BG};stroke-width:1.5;stroke-linejoin:round"/>
     <text x="${PV}" y="${PY + 26}" text-anchor="middle" style="font-size:7.5px;letter-spacing:1px;font-weight:600;fill:${vCol}">${vTxt.toUpperCase()}</text>
   </g>
-  ${tBadge(P1, PY, t1, C.supply, C.label_supply, PY - 18)}
-  ${tBadge(P2, PY, t2, C.coil_in, C.label_coil_in, PY - 18)}
-  ${tBadge(P3, PY, t3, C.coil_out, C.label_coil_out, PY - 18)}
+  ${tBadge(P1, PY, t1, C.supply, lbl('supply'), PY - 18)}
+  ${tBadge(P2, PY, t2, C.coil_in, lbl('coil_in'), PY - 18)}
+  ${tBadge(P3, PY, t3, C.coil_out, lbl('coil_out'), PY - 18)}
   <text x="${(B0 + B1) / 2}" y="${PY + 38}" text-anchor="middle" style="font-size:9px;font-weight:600;fill:${dCol};font-variant-numeric:tabular-nums">Δ ${sg(dCoil)}</text>
   <text x="${X0}" y="${PY + 38}" style="font-size:7.5px;fill:${SEC}">z kúrenia →</text>
   <text x="${X1}" y="${PY + 38}" text-anchor="end" style="font-size:7.5px;fill:${SEC}">→ do kúrenia</text>
@@ -677,7 +929,91 @@ return wrap(`
 
 }
 function renderD(states, C) {
+// ---------- translations (language: auto = Home Assistant's language, sk, cs, en) ----------
+const I18N = {
+  sk: {
+    title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
+    supply: 'PRÍVOD', coil_in: 'DO BOJLERA', coil_out: 'SPIATOČKA',
+    hot_water: 'TEPLÁ VODA', cold_water: 'STUDENÁ VODA',
+    open: 'otvorený', closed: 'zatvorený', unavailable: 'nedostupný', valve: 'ventil', valve_q: 'VENTIL ?',
+    valve_unavailable: 'ventil nedostupný', el_badge: '⚡ elektrina',
+    na: 'nedostupné', na_txt: 'Teplotné senzory sú nedostupné',
+    bad: 'bojler kúri radiátory',
+    bad_txt: (tin, tb) => `Ventil je otvorený, ale voda z kúrenia (${tin}) je chladnejšia ako bojler (${tb}). Bojler ohrieva radiátory.`,
+    tuv: 'ohrev z kúrenia', tuv_txt: d => 'Kúrenie ohrieva bojler' + (d !== null ? ` · výmenník odovzdáva ${d.toFixed(1)}°` : ''),
+    ready: 'kúrenie je teplé', ready_txt: d => `Prívod je o ${d.toFixed(1)}° teplejší ako bojler, ventil by mohol otvoriť`,
+    el: 'elektrický ohrev', el_txt: colder => `Ohrieva elektrina · kúrenie je ${colder ? 'chladnejšie ako bojler' : 'málo teplé'}`,
+    idle: 'pohotovosť',
+    idle_txt: d => d === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${d >= 0 ? 'len o ' + d.toFixed(1) + '° teplejší' : 'o ' + (-d).toFixed(1) + '° chladnejší'} ako bojler`,
+    s_sup: 'prívod − bojler', s_coil: 'výmenník Δ', s_el: 'elektrina', el_on: 'zapnutá', el_off: 'vypnutá',
+    coil_only_open: 'len pri otvorenom ventile',
+    just_now: 'práve',
+    hist: 'HISTÓRIA', hist_now: 'teraz', c_heat: 'ohrev z kúrenia', c_el: 'elektrina', c_kwh: 'spotreba elektriny',
+    c_rev: 'bojler kúril radiátory', h_heat: 'kúrenie', h_el: 'elektrina', h_valve: 'ventil', h_element: 'špirála',
+    loading: 'Načítavam históriu…', hist_err: 'História nie je dostupná: ',
+    pick: 'Vyber entitu bojlera (teplota) a ventilu v editore karty.',
+  },
+  cs: {
+    title: 'Bojler', BOILER: 'BOJLER', boiler: 'bojler',
+    supply: 'PŘÍVOD', coil_in: 'DO BOJLERU', coil_out: 'ZPÁTEČKA',
+    hot_water: 'TEPLÁ VODA', cold_water: 'STUDENÁ VODA',
+    open: 'otevřený', closed: 'zavřený', unavailable: 'nedostupný', valve: 'ventil', valve_q: 'VENTIL ?',
+    valve_unavailable: 'ventil nedostupný', el_badge: '⚡ elektřina',
+    na: 'nedostupné', na_txt: 'Teplotní senzory jsou nedostupné',
+    bad: 'bojler topí radiátory',
+    bad_txt: (tin, tb) => `Ventil je otevřený, ale voda z topení (${tin}) je chladnější než bojler (${tb}). Bojler ohřívá radiátory.`,
+    tuv: 'ohřev z topení', tuv_txt: d => 'Topení ohřívá bojler' + (d !== null ? ` · výměník předává ${d.toFixed(1)}°` : ''),
+    ready: 'topení je teplé', ready_txt: d => `Přívod je o ${d.toFixed(1)}° teplejší než bojler, ventil by mohl otevřít`,
+    el: 'elektrický ohřev', el_txt: colder => `Ohřívá elektřina · topení je ${colder ? 'chladnější než bojler' : 'málo teplé'}`,
+    idle: 'pohotovost',
+    idle_txt: d => d === null ? 'Ventil zavřený' : `Ventil zavřený · přívod je ${d >= 0 ? 'jen o ' + d.toFixed(1) + '° teplejší' : 'o ' + (-d).toFixed(1) + '° chladnější'} než bojler`,
+    s_sup: 'přívod − bojler', s_coil: 'výměník Δ', s_el: 'elektřina', el_on: 'zapnutá', el_off: 'vypnutá',
+    coil_only_open: 'jen při otevřeném ventilu',
+    just_now: 'právě',
+    hist: 'HISTORIE', hist_now: 'teď', c_heat: 'ohřev z topení', c_el: 'elektřina', c_kwh: 'spotřeba elektřiny',
+    c_rev: 'bojler topil radiátory', h_heat: 'topení', h_el: 'elektřina', h_valve: 'ventil', h_element: 'spirála',
+    loading: 'Načítám historii…', hist_err: 'Historie není dostupná: ',
+    pick: 'Vyberte entitu teploty bojleru a ventil v editoru karty.',
+  },
+  en: {
+    title: 'Boiler', BOILER: 'BOILER', boiler: 'boiler',
+    supply: 'SUPPLY', coil_in: 'TO BOILER', coil_out: 'RETURN',
+    hot_water: 'HOT WATER', cold_water: 'COLD WATER',
+    open: 'open', closed: 'closed', unavailable: 'unavailable', valve: 'valve', valve_q: 'VALVE ?',
+    valve_unavailable: 'valve unavailable', el_badge: '⚡ electric',
+    na: 'unavailable', na_txt: 'Temperature sensors are unavailable',
+    bad: 'boiler heats radiators',
+    bad_txt: (tin, tb) => `The valve is open, but the heating water (${tin}) is colder than the boiler (${tb}). The boiler is heating the radiators.`,
+    tuv: 'heated by heating', tuv_txt: d => 'The heating is warming the boiler' + (d !== null ? ` · the coil passes on ${d.toFixed(1)}°` : ''),
+    ready: 'heating is warm', ready_txt: d => `The supply is ${d.toFixed(1)}° warmer than the boiler, the valve could open`,
+    el: 'electric heating', el_txt: colder => `Electricity is heating · the heating water is ${colder ? 'colder than the boiler' : 'not warm enough'}`,
+    idle: 'standby',
+    idle_txt: d => d === null ? 'Valve closed' : `Valve closed · the supply is ${d >= 0 ? 'only ' + d.toFixed(1) + '° warmer' : (-d).toFixed(1) + '° colder'} than the boiler`,
+    s_sup: 'supply − boiler', s_coil: 'coil Δ', s_el: 'electricity', el_on: 'on', el_off: 'off',
+    coil_only_open: 'only while the valve is open',
+    just_now: 'now',
+    hist: 'HISTORY', hist_now: 'now', c_heat: 'heated by heating', c_el: 'electricity', c_kwh: 'electricity used',
+    c_rev: 'boiler heated radiators', h_heat: 'heating', h_el: 'electricity', h_valve: 'valve', h_element: 'element',
+    loading: 'Loading history…', hist_err: 'History is not available: ',
+    pick: 'Pick the boiler temperature and the valve in the card editor.',
+  },
+};
+const i18nLang = (language, haLang) => {
+  const l = String((language && language !== 'auto' ? language : haLang) || 'sk').slice(0, 2);
+  return I18N[l] ? l : 'en';
+};
+// custom label if the user set one, otherwise the default of the current language
+// (a saved default from any language counts as "not set", so switching language translates it)
+const i18nText = (cfg, key, cfgKey) => {
+  const v = cfg[cfgKey], T = I18N[cfg.lang || 'sk'];
+  return v && !Object.values(I18N).some(t => t[key] === v) ? v : T[key];
+};
 
+
+const LANG = C.lang || i18nLang(C.language, typeof hass !== 'undefined' && hass ? hass.language : '');
+const T = I18N[LANG], CL = { ...C, lang: LANG };
+const lbl = k => i18nText(CL, k, 'label_' + k);
+const TITLE = i18nText(CL, 'title', 'title');
 const U = C.uid || 'bt';  // constant: each button-card has its own shadow root
 const ok = s => s && !['unknown','unavailable'].includes(s.state);
 const num = id => { if (!id) return null; const s = states[id]; if (!ok(s)) return null; const v = parseFloat(s.state); return isNaN(v) ? null : v; };
@@ -707,7 +1043,7 @@ const sg = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.a
 const ago = ts => {
   if (!ts) return '';
   const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
-  return m < 1 ? 'práve' : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`;
+  return m < 1 ? T.just_now : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} d`;
 };
 const mi = id => id ? `class="bt-click" onclick="event.stopPropagation();this.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:'${id}'}}))"` : '';
 const tint = (c, p) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
@@ -731,23 +1067,23 @@ const dCoil = t2 !== null && t3 !== null ? t2 - t3 : null;
 const SUC = 'var(--success-color, #43a047)', ERR = 'var(--error-color, #db4437)', WRN = 'var(--warning-color, #ffa600)';
 const INF = 'var(--info-color, #039be5)', SEC = 'var(--secondary-text-color, #727272)';
 let st;
-if (tb === null || tin === null) st = { k: 'na', c: SEC, icon: 'mdi:lan-disconnect', label: 'nedostupné', txt: 'Teplotné senzory sú nedostupné' };
-else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert', label: 'bojler kúri radiátory', txt: `Ventil je otvorený, ale voda z kúrenia (${f(tin)}) je chladnejšia ako bojler (${f(tb)}). Bojler ohrieva radiátory.` };
-else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: 'ohrev z kúrenia', txt: `Kúrenie ohrieva bojler` + (dCoil !== null ? ` · výmenník odovzdáva ${dCoil.toFixed(1)}°` : '') };
-else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: 'kúrenie je teplé', txt: `Prívod je o ${dSup.toFixed(1)}° teplejší ako bojler, ventil by mohol otvoriť` };
-else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: 'elektrický ohrev', txt: `Ohrieva elektrina · kúrenie je ${dSup !== null && dSup < 0 ? 'chladnejšie ako bojler' : 'málo teplé'}` };
-else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: 'pohotovosť', txt: dSup === null ? 'Ventil zatvorený' : `Ventil zatvorený · prívod je ${dSup >= 0 ? 'len o ' + dSup.toFixed(1) + '° teplejší' : 'o ' + (-dSup).toFixed(1) + '° chladnejší'} ako bojler` };
+if (tb === null || tin === null) st = { k: 'na', c: SEC, icon: 'mdi:lan-disconnect', label: T.na, txt: T.na_txt };
+else if (open && dIn < -C.reverse_tol) st = { k: 'bad', c: ERR, icon: 'mdi:alert', label: T.bad, txt: T.bad_txt(f(tin), f(tb)) };
+else if (open) st = { k: 'tuv', c: SUC, icon: 'mdi:check-circle', label: T.tuv, txt: T.tuv_txt(dCoil) };
+else if (dSup !== null && dSup >= C.min_delta) st = { k: 'ready', c: INF, icon: 'mdi:information', label: T.ready, txt: T.ready_txt(dSup) };
+else if (heating) st = { k: 'el', c: WRN, icon: 'mdi:flash', label: T.el, txt: T.el_txt(dSup !== null && dSup < 0) };
+else st = { k: 'idle', c: SEC, icon: 'mdi:power-sleep', label: T.idle, txt: T.idle_txt(dSup) };
 
 const pill = (txt, c) => `<span style="font-size:12px;padding:4px 10px;border-radius:7px;font-weight:500;white-space:nowrap;background:${tint(c, 15)};color:${c}">${txt}</span>`;
 let pills = '';
-if (!vOk) pills += pill('ventil nedostupný', SEC);
-if (heating && st.k !== 'el') pills += pill('⚡ elektrina', WRN);
+if (!vOk) pills += pill(T.valve_unavailable, SEC);
+if (heating && st.k !== 'el') pills += pill(T.el_badge, WRN);
 pills += pill(st.label, st.c);
 
 
 const cB = tc(tb), c1 = tc(t1), c2 = tc(t2), c3 = tc(t3);
 const vCol = !vOk ? SEC : open ? SUC : SEC;
-const vTxt = !vOk ? 'nedostupný' : open ? 'otvorený' : 'zatvorený';
+const vTxt = !vOk ? T.unavailable : open ? T.open : T.closed;
 const dCol = !open || dCoil === null ? SEC : dCoil >= 0 ? SUC : ERR;
 const supCol = dSup === null ? SEC : dSup >= C.min_delta ? SUC : dSup >= 0 ? WRN : ERR;
 const flowCol = st.k === 'bad' ? ERR : '#fff';
@@ -767,7 +1103,7 @@ const STYLE = `
 const header = (extra = '') => `
   <div style="display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--divider-color)">
     <ha-icon icon="mdi:water-boiler" style="--mdc-icon-size:18px;color:${st.c};flex-shrink:0"></ha-icon>
-    <span style="font-size:15px;font-weight:500">${C.title}</span>${extra}
+    <span style="font-size:15px;font-weight:500">${TITLE}</span>${extra}
     <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${pills}</span>
   </div>`;
 const banner = () => `
@@ -786,7 +1122,7 @@ const tBadge = (x, y, v, id, label, ly) => `
 
 // ---------- D: compact tile ----------
 const seg = (v, w) => `<div style="flex:${w};height:8px;background:${tc(v)};opacity:${v === null ? .25 : 1}"></div>`;
-const lbl = (t, v, col) => `<span style="white-space:nowrap"><span style="color:${SEC}">${t}</span> <b style="font-weight:600;color:${col}">${f(v)}</b></span>`;
+const tLbl = (t, v, col) => `<span style="white-space:nowrap"><span style="color:${SEC}">${t}</span> <b style="font-weight:600;color:${col}">${f(v)}</b></span>`;
 
 return wrap(`
   <div style="display:flex;align-items:center;gap:12px">
@@ -794,7 +1130,7 @@ return wrap(`
       <ha-icon icon="${st.k === 'el' ? 'mdi:flash' : 'mdi:water-boiler'}" style="--mdc-icon-size:22px"></ha-icon>
     </div>
     <div style="min-width:0;flex:1">
-      <div style="font-size:15px;font-weight:500">${C.title}</div>
+      <div style="font-size:15px;font-weight:500">${TITLE}</div>
       <div style="font-size:12px;color:${st.c};font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${st.label}${heating && st.k !== 'el' ? ' · ⚡ elektrina' : ''}</div>
     </div>
     <div ${mi(C.boiler)} style="font-size:30px;font-weight:400;line-height:1;color:${cB};font-variant-numeric:tabular-nums">${tb === null ? '—' : tb.toFixed(1)}<span style="font-size:14px;vertical-align:top">°C</span></div>
@@ -805,7 +1141,7 @@ return wrap(`
     <div style="display:flex;flex:3;border-radius:0 4px 4px 0;overflow:hidden;opacity:${open ? 1 : .45}">${seg(t2, 1)}${seg(t3, 1)}</div>
   </div>
   <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:11.5px;font-variant-numeric:tabular-nums">
-    ${lbl('prívod', t1, c1)}${lbl('do bojlera', t2, c2)}${lbl('spiatočka', t3, c3)}
+    ${tLbl(lbl('supply').toLowerCase(), t1, c1)}${tLbl(lbl('coil_in').toLowerCase(), t2, c2)}${tLbl(lbl('coil_out').toLowerCase(), t3, c3)}
   </div>`);
 
 }

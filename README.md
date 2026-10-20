@@ -24,9 +24,11 @@ Below the drawing, a history section (last 24 hours by default) shows:
 
 The values row under the drawing shows **prívod − bojler** (supply − boiler: positive means the heating water is warmer and worth using) and **výmenník Δ** (coil Δ: into the coil minus out of it: how much the water cooled in the boiler, shown only while the valve is open). Hover a value to see the calculation.
 
-Move the mouse or a finger over the graph to read the values at that time. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant. The labels are in Slovak (see [Slovak labels](#slovak-labels) for translations), and you can rename the pipe labels in the editor.
+Move the mouse or a finger over the graph to read the values at that time. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant. The card speaks **Slovak, Czech and English**: by default it follows your Home Assistant language, or pick one in the editor under *Language*. You can also rename the title and the pipe labels; leave them empty for the default text of the chosen language.
 
 ## Slovak labels
+
+The card is also available in English and Czech (set *Language* in the editor). The tables below translate the Slovak texts for readers of this page and of the screenshot.
 
 | In the card | In English |
 |---|---|
@@ -94,7 +96,8 @@ heater_power: sensor.bojler_power              # electric element power in W
 
 | Option | Default | What it does |
 |---|---|---|
-| `title` | `Bojler` | Card title |
+| `language` | `auto` | `auto` (Home Assistant's language), `sk`, `cs` or `en` |
+| `title` | *Bojler* / *Boiler* | Card title; empty = default of the language |
 | `boiler` | — | Boiler water temperature sensor (required) |
 | `supply` | — | Heating supply temperature, before the valve |
 | `coil_in` | — | Temperature after the valve, going into the coil |
@@ -111,7 +114,7 @@ heater_power: sensor.bojler_power              # electric element power in W
 | `show_graph` | `true` | Show the history section |
 | `graph_hours` | `24` | Hours of history (1–168) |
 | `graph_smooth` | `20` | Minutes of rolling average for the graph lines, so a cycling heat source doesn't zigzag (`0` = raw readings) |
-| `label_supply` / `label_coil_in` / `label_coil_out` | `PRÍVOD` / `DO BOJLERA` / `SPIATOČKA` | Pipe labels (supply / into the boiler / return) |
+| `label_supply` / `label_coil_in` / `label_coil_out` | language default | Pipe labels; empty = *PRÍVOD / DO BOJLERA / SPIATOČKA* (sk), *PŘÍVOD / DO BOJLERU / ZPÁTEČKA* (cs), *SUPPLY / TO BOILER / RETURN* (en) |
 
 ## Performance
 

@@ -50,10 +50,10 @@ return wrap(`
   </div>
   <div>
     <div style="display:grid;${COLS};font-size:9px;color:${SEC};padding-bottom:2px"><span></span><span></span><span style="text-align:right">°C</span><span style="text-align:right">Δ bojler</span></div>
-    ${row(C.label_supply, t1, C.supply)}
+    ${row(lbl('supply'), t1, C.supply)}
     ${valveRow}
-    ${row(C.label_coil_in, t2, C.coil_in)}
-    ${row(C.label_coil_out, t3, C.coil_out)}
+    ${row(lbl('coil_in'), t2, C.coil_in)}
+    ${row(lbl('coil_out'), t3, C.coil_out)}
     <div style="display:grid;${COLS};font-size:9px;color:${SEC};padding-top:4px"><span></span><span style="position:relative;height:12px">${ticks}</span><span></span><span></span></div>
   </div>
   ${banner()}`);
