@@ -28,6 +28,8 @@ Below the drawing, a history section (last 24 hours by default) shows:
 
 **Two tariffs (optional).** Where the utility switches the boiler off during the peak tariff (in Slovakia and Czechia *vysoký / nízký tarif*, *VT / NT*, controlled by *HDO*), pick your tariff entity in the editor. The card then shows an off-peak/peak badge, explains that the element is switched off during the peak tariff, and marks the off-peak periods under the hourly bars. With a second, optional sensor that contains the time of the next change (a text such as "Vysoky Tarif do 16:55", or a timestamp), the badge and status also say until when. Leave it empty if you have a single rate; the card then looks as before.
 
+**Landscape on wide dashboards.** When the card is wider than 720 px (for example a section spanning two columns), the history moves to the right of the drawing; on narrower cards and phones it stays below. Set `layout` to keep it always below (`stacked`) or always beside (`side`).
+
 Move the mouse or a finger over the graph to read the values at that time. Click any temperature, the valve or the element in the drawing to open its history in Home Assistant.
 
 ## Languages
@@ -85,6 +87,7 @@ The card speaks **English, Slovak and Czech**, including the card editor. By def
 | `animate` | Flow animation | Animácia toku | Animace toku |
 | `show_header` | Header | Hlavička | Hlavička |
 | `show_stats` | Values row | Riadok s hodnotami | Řádek s hodnotami |
+| `layout` | Layout | Rozloženie | Rozložení |
 | `show_banner` | Status bar | Stavový pruh | Stavový pruh |
 | `tariff_low` | Tariff states that mean off-peak | Stavy tarifu, ktoré znamenajú nízky tarif | Stavy tarifu, které znamenají nízký tarif |
 | `label_supply` | Label: supply | Popis: prívod | Popisek: přívod |
@@ -135,6 +138,7 @@ heater_power: sensor.bojler_power              # electric element power in W
 | `min_delta` | `3` | How much warmer (°C) the supply must be to count as useful |
 | `reverse_tol` | `0.5` | Tolerance (°C) before the "boiler heats radiators" alarm |
 | `animate` | `true` | Moving dashes in the pipes while the valve is open |
+| `layout` | `auto` | `auto`: history beside the drawing when the card is wider than 720 px, below otherwise; `stacked`: always below; `side`: always beside |
 | `show_header` / `show_stats` / `show_banner` | `true` | Show the header, the values row and the status bar |
 | `show_graph` | `true` | Show the history section |
 | `graph_hours` | `24` | Hours of history (1–168) |

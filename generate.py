@@ -40,6 +40,7 @@ CONFIG = {
     "min_delta": 3,        # °C supply must beat the boiler by to be worth opening
     "reverse_tol": 0.5,    # °C tolerance before "boiler heats radiators" alarm
     "animate": True,       # moving dashes in the pipes while the valve is open
+    "layout": "auto",      # auto (history beside the drawing when the card is wider than 720 px), stacked, side
     "show_header": True,
     "show_stats": True,
     "show_banner": True,
@@ -48,7 +49,7 @@ CONFIG = {
     "graph_smooth": 20,    # minutes of rolling mean for the graph lines (0 = raw)
     "graph_power": False,  # element power as an area in the graph, with kWh per run
 }
-VERSION = "1.5.0"
+VERSION = "1.6.0"
 # the author's own settings for the button-card YAML and the preview (not defaults of the HACS card)
 AUTHOR = {"tariff_low": "off"}  # this HDO relay is on during the high tariff
 # preview only: extra config for the simulated page

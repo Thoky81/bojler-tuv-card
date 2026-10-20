@@ -34,8 +34,20 @@ class BojlerTuvCard extends HTMLElement {
   _render() {
     if (!this.shadowRoot) {
       this.attachShadow({ mode: 'open' }).innerHTML = `
-        <style>ha-card { padding: 16px; } .msg { color: var(--secondary-text-color); font-size: 14px; }</style>
-        <ha-card><div id="c"></div><div id="g"></div></ha-card>`;
+        <style>
+          ha-card { display: block; padding: 16px; container-type: inline-size; height: 100%; box-sizing: border-box; }
+          .msg { color: var(--secondary-text-color); font-size: 14px; }
+          #g:empty { display: none; }
+          #g > * { padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--divider-color); }
+          /* side by side: the history moves to the right of the drawing (always, or when the card is wide) */
+          .wrap.side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+          .wrap.side #g > * { padding: 0 0 0 24px; margin: 0; border-top: none; border-left: 1px solid var(--divider-color); }
+          @container (min-width: 720px) {
+            .wrap.auto { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+            .wrap.auto #g > * { padding: 0 0 0 24px; margin: 0; border-top: none; border-left: 1px solid var(--divider-color); }
+          }
+        </style>
+        <ha-card><div class="wrap"><div id="c"></div><div id="g"></div></div></ha-card>`;
       const g = this.shadowRoot.getElementById('g');
       const at = e => {
         const svg = g.querySelector('#hsvg'), d = this._hist;
@@ -53,6 +65,7 @@ class BojlerTuvCard extends HTMLElement {
     this._cfg.hour12 = tf === '12' ? true : tf === '24' ? false : undefined;
     this._cfg.power_unit = this._hass?.states?.[this._cfg.heater_power]?.attributes?.unit_of_measurement || 'W';
     const el = this.shadowRoot.getElementById('c');
+    el.parentElement.className = 'wrap ' + (this._cfg.show_graph ? this._cfg.layout || 'auto' : 'stacked');
     if (!this._cfg.boiler || !this._cfg.valve) {
       el.innerHTML = `<div class="msg">${I18N[this._cfg.lang].pick}</div>`;
       this.shadowRoot.getElementById('g').innerHTML = '';
@@ -69,7 +82,7 @@ class BojlerTuvCard extends HTMLElement {
     if (!this._cfg.show_graph) { g.innerHTML = ''; return; }
     if (this._hist) { appendLive(this._hist, this._hass, this._cfg); this._scheduleGraph(); return; }
     if (this._loading || this._histErr) return;
-    const gk = this._gk, msg = t => `<div class="msg" style="padding-top:12px;margin-top:12px;border-top:1px solid var(--divider-color);font-size:12.5px">${t}</div>`;
+    const gk = this._gk, msg = t => `<div class="msg" style="font-size:12.5px">${t}</div>`;
     this._loading = true;
     g.innerHTML = msg(I18N[this._cfg.lang].loading);
     loadHistory(this._hass, this._cfg).then(d => {
@@ -132,6 +145,8 @@ class BojlerTuvCard extends HTMLElement {
 
 const EDITOR = {
   sk: {
+    layout: 'Rozloženie', layout_auto: 'Automaticky podľa šírky karty', layout_stacked: 'História pod kartou', layout_side: 'História vedľa karty',
+    layout_help: 'Automaticky: história sa presunie doprava, keď je karta širšia ako 720 px',
     language: 'Jazyk', auto: 'Automaticky (podľa Home Assistanta)', history: 'História', advanced: 'Rozšírené',
     title: 'Názov', boiler: 'Teplota bojlera', supply: 'Prívod z kúrenia (pred ventilom)', coil_in: 'Do bojlera (za ventilom)',
     coil_out: 'Spiatočka (z výmenníka)', valve: 'Ventil', heater_power: 'Aktuálny príkon špirály (senzor W alebo kW)',
@@ -146,6 +161,8 @@ const EDITOR = {
     tariff_low: 'Stavy tarifu, ktoré znamenajú nízky tarif', tariff_low_help: 'Oddelené čiarkou, napr. on, NT, low',
   },
   cs: {
+    layout: 'Rozložení', layout_auto: 'Automaticky podle šířky karty', layout_stacked: 'Historie pod kartou', layout_side: 'Historie vedle karty',
+    layout_help: 'Automaticky: historie se přesune doprava, když je karta širší než 720 px',
     language: 'Jazyk', auto: 'Automaticky (podle Home Assistantu)', history: 'Historie', advanced: 'Rozšířené',
     title: 'Název', boiler: 'Teplota bojleru', supply: 'Přívod z topení (před ventilem)', coil_in: 'Do bojleru (za ventilem)',
     coil_out: 'Zpátečka (z výměníku)', valve: 'Ventil', heater_power: 'Aktuální příkon spirály (senzor W nebo kW)',
@@ -160,6 +177,8 @@ const EDITOR = {
     tariff_low: 'Stavy tarifu, které znamenají nízký tarif', tariff_low_help: 'Oddělené čárkou, např. on, NT, low',
   },
   en: {
+    layout: 'Layout', layout_auto: 'Auto (by card width)', layout_stacked: 'History below', layout_side: 'History beside',
+    layout_help: 'Auto: the history moves to the right when the card is wider than 720 px',
     language: 'Language', auto: 'Auto (Home Assistant language)', history: 'History', advanced: 'Advanced',
     title: 'Title', boiler: 'Boiler temperature', supply: 'Heating supply (in front of the valve)', coil_in: 'Into the boiler (after the valve)',
     coil_out: 'Return (out of the coil)', valve: 'Valve', heater_power: 'Current power of the electric element (W or kW sensor)',
@@ -206,6 +225,9 @@ const schemaFor = E => [
       { name: 'heater_on_w', selector: { number: { mode: 'box', unit_of_measurement: 'W' } } },
       { name: 'animate', selector: { boolean: {} } },
     ] },
+    { name: 'layout', selector: { select: { mode: 'dropdown', options: [
+      { value: 'auto', label: E.layout_auto }, { value: 'stacked', label: E.layout_stacked }, { value: 'side', label: E.layout_side },
+    ] } } },
     { name: '', type: 'grid', schema: [
       { name: 'show_header', selector: { boolean: {} } },
       { name: 'show_stats', selector: { boolean: {} } },

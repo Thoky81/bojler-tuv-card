@@ -272,7 +272,7 @@ function renderGraph(d, cfg, lang) {
   }
 
   return `
-  <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;margin-top:12px;border-top:1px solid var(--divider-color)">
+  <div class="hist" style="display:flex;flex-direction:column;gap:8px">
     <div style="display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap">
       <span style="font-size:11px;font-weight:600;letter-spacing:1.2px;color:${GSEC}">${L.hist} · ${hours} h</span>
       <span id="hleg" style="margin-left:auto;display:flex;gap:4px 12px;flex-wrap:wrap;justify-content:flex-end;align-items:center;font-size:11.5px">${legendHtml(d, cfg, null, lang)}</span>
